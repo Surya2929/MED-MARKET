@@ -14,69 +14,124 @@ mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/med-marketp
 
 const seedDatabase = async () => {
   try {
+    // Purana data clear karein
     await User.deleteMany();
     await Store.deleteMany();
     await Medicine.deleteMany();
     await Inventory.deleteMany();
 
-    // 1. MEGA MASTER MEDICINE LIST
+    // Naya Medicine Data (Added salt, manufacturer, category, expiry)
     const medicinesData = [
-      { name: 'Dolo 650', composition: 'Paracetamol 650mg', uses: 'Fever, Body ache', dosage: '1 tablet 6 hours' },
-      { name: 'Azithral 500', composition: 'Azithromycin 500mg', uses: 'Bacterial Infections, Throat ache', dosage: '1 tablet a day' },
-      { name: 'Cetirizine 10mg', composition: 'Cetirizine', uses: 'Allergy, Runny Nose', dosage: '1 tablet at night' },
-      { name: 'Pantocid DSR', composition: 'Pantoprazole + Domperidone', uses: 'Acidity, Gas', dosage: '1 capsule empty stomach' },
-      { name: 'Augmentin 625', composition: 'Amoxicillin + Clavulanic Acid', uses: 'Severe Infections', dosage: '1 tablet twice a day' },
-      { name: 'Allegra 120', composition: 'Fexofenadine', uses: 'Skin Allergy, Sneezing', dosage: '1 tablet a day' },
-      { name: 'Calpol 500', composition: 'Paracetamol 500mg', uses: 'Mild Fever, Headache', dosage: '1 tablet 6 hours' },
-      { name: 'Thyronorm 50mcg', composition: 'Thyroxine', uses: 'Hypothyroidism', dosage: '1 tablet morning empty stomach' },
-      { name: 'Ecosprin 75', composition: 'Aspirin', uses: 'Blood thinning, Heart attack prevention', dosage: '1 tablet a day' },
-      { name: 'Saridon', composition: 'Paracetamol + Propyphenazone + Caffeine', uses: 'Severe Headache', dosage: '1 tablet when required' }
+      { 
+        name: 'Dolo 650', 
+        salt: 'Paracetamol 650mg', 
+        category: 'solid', 
+        manufacturer: 'Micro Labs Ltd', 
+        composition: 'Paracetamol 650mg', 
+        uses: 'Fever, Body ache', 
+        dosage: '1 tablet every 6 hours',
+        manufactureDate: new Date('2024-01-01'),
+        expiryDate: new Date('2026-12-31')
+      },
+      { 
+        name: 'Crocin 650', 
+        salt: 'Paracetamol 650mg', 
+        category: 'solid', 
+        manufacturer: 'GSK Pharma', 
+        composition: 'Paracetamol 650mg', 
+        uses: 'Fever, Pain relief', 
+        dosage: '1 tablet 3 times a day',
+        manufactureDate: new Date('2024-02-01'),
+        expiryDate: new Date('2027-01-01')
+      },
+      { 
+        name: 'Diacard Gold', 
+        salt: 'Cactus Grandiflorus, Crataegus', 
+        category: 'liquid', 
+        manufacturer: 'Madaus & Co.', 
+        composition: 'Herbal Blend', 
+        uses: 'Heart health, Palpitations', 
+        dosage: '20 drops twice daily',
+        manufactureDate: new Date('2023-11-01'),
+        expiryDate: new Date('2025-10-01')
+      },
+      { 
+        name: 'Eno Lemon', 
+        salt: 'Svarjiksara, Nimbukamlam', 
+        category: 'powder', 
+        manufacturer: 'GSK Consumer', 
+        composition: 'Sodium Bicarbonate, Citric Acid', 
+        uses: 'Acidity, Gas', 
+        dosage: '1 sachet in water',
+        manufactureDate: new Date('2024-03-01'),
+        expiryDate: new Date('2026-03-01')
+      },
+      { 
+        name: 'Volini Gel', 
+        salt: 'Diclofenac Diethylamine', 
+        category: 'cream', 
+        manufacturer: 'Sun Pharma', 
+        composition: 'Diclofenac, Menthol', 
+        uses: 'Muscle Pain, Back ache', 
+        dosage: 'Apply on affected area',
+        manufactureDate: new Date('2024-01-15'),
+        expiryDate: new Date('2025-12-15')
+      },
+      { 
+        name: 'Azithral 500', 
+        salt: 'Azithromycin 500mg', 
+        category: 'solid', 
+        manufacturer: 'Alembic Ltd', 
+        composition: 'Azithromycin', 
+        uses: 'Bacterial Infections', 
+        dosage: '1 tablet a day',
+        manufactureDate: new Date('2023-08-01'),
+        expiryDate: new Date('2026-07-01')
+      },
+      { 
+        name: 'Cetirizine 10mg', 
+        salt: 'Cetirizine', 
+        category: 'solid', 
+        manufacturer: 'Cipla', 
+        composition: 'Cetirizine Hydrochloride', 
+        uses: 'Allergy, Cold', 
+        dosage: '1 tablet at night',
+        manufactureDate: new Date('2023-05-01'),
+        expiryDate: new Date('2026-05-01')
+      }
     ];
 
     const insertedMedicines = await Medicine.insertMany(medicinesData);
 
-    // 2. CREATE VENDORS (Added Budaun & Mathura)
+    // Password hashing
     const salt = await bcrypt.genSalt(10);
     const hash = await bcrypt.hash('password', salt);
-    const v1 = await User.create({ name: 'Rahul Medicos', email: 'v1@test.com', password: hash, phone: '111', role: 'vendor' });
-    const v2 = await User.create({ name: 'City Pharmacy', email: 'v2@test.com', password: hash, phone: '222', role: 'vendor' });
-    const v3 = await User.create({ name: 'Apollo Pharmacy', email: 'v3@test.com', password: hash, phone: '333', role: 'vendor' });
-    const v4 = await User.create({ name: 'Budaun Medical Store', email: 'budaun@test.com', password: hash, phone: '444', role: 'vendor' });
-    const v5 = await User.create({ name: 'Mathura Medical Store', email: 'mathura@test.com', password: hash, phone: '555', role: 'vendor' });
+    
+    // Create Admin
+    await User.create({ name: 'Super Admin', email: 'admin@medmarket.in', password: hash, phone: '0000000000', role: 'admin' });
 
-    // 3. CREATE STORES (With specific Cities)
-    const store1 = await Store.create({ vendorId: v1._id, storeName: 'Rahul Medicos', address: 'Delhi, IN', licenseNumber: 'L1', isVerified: true });
-    const store2 = await Store.create({ vendorId: v2._id, storeName: 'City Pharmacy', address: 'Mumbai, IN', licenseNumber: 'L2', isVerified: true });
-    const store3 = await Store.create({ vendorId: v3._id, storeName: 'Apollo Pharmacy', address: 'Bangalore, IN', licenseNumber: 'L3', isVerified: true });
-    const store4 = await Store.create({ vendorId: v4._id, storeName: 'Budaun Medical Store', address: 'Indra Chowk, Budaun, UP', licenseNumber: 'L4', isVerified: true });
-    const store5 = await Store.create({ vendorId: v5._id, storeName: 'Mathura Medical Store', address: 'Krishna Nagar, Mathura, UP', licenseNumber: 'L5', isVerified: true });
+    // Create Vendors
+    const vDelhi = await User.create({ name: 'Delhi Medicals', email: 'delhi@test.com', password: hash, phone: '1111111111', role: 'vendor' });
+    const vBudaun = await User.create({ name: 'Budaun Medical Store', email: 'budaun@test.com', password: hash, phone: '2222222222', role: 'vendor' });
+    const vMathura1 = await User.create({ name: 'Krishna Pharmacy', email: 'mathura1@test.com', password: hash, phone: '3333333333', role: 'vendor' });
 
-    const allStores = [store1, store2, store3, store4, store5];
+    // Create Stores
+    const storeDelhi = await Store.create({ vendorId: vDelhi._id, storeName: 'Delhi Medicals', address: 'Connaught Place, Delhi', licenseNumber: 'DL-01', isVerified: true });
+    const storeBudaun = await Store.create({ vendorId: vBudaun._id, storeName: 'Budaun Medical Store', address: 'Indra Chowk, Budaun, UP', licenseNumber: 'UP-BD-02', isVerified: true });
+    const storeMathura1 = await Store.create({ vendorId: vMathura1._id, storeName: 'Krishna Pharmacy', address: 'Krishna Nagar, Mathura, UP', licenseNumber: 'UP-MT-03', isVerified: true });
 
-    // 4. ADD INVENTORIES (Distributing medicines across all 5 stores randomly)
+    // Create Inventory
     const inventoryData = [];
-    insertedMedicines.forEach((med, index) => {
+    insertedMedicines.forEach((med) => {
       const basePrice = Math.floor(Math.random() * 100) + 20; 
-      
-      // Shuffle stores so different stores have different medicines
-      const shuffledStores = allStores.sort(() => 0.5 - Math.random());
-      
-      // Add medicine to 3 to 5 random stores
-      const storesToFill = Math.floor(Math.random() * 3) + 3; 
-
-      for(let i=0; i<storesToFill; i++) {
-        inventoryData.push({ 
-          storeId: shuffledStores[i]._id, 
-          medicineId: med._id, 
-          price: basePrice + (Math.floor(Math.random() * 10) - 5), // Price variation +/- 5 rupees
-          stock: Math.floor(Math.random() * 100) + 10 
-        });
-      }
+      inventoryData.push({ storeId: storeDelhi._id, medicineId: med._id, price: basePrice, stock: 150 });
+      inventoryData.push({ storeId: storeBudaun._id, medicineId: med._id, price: basePrice + 5, stock: 80 });
+      inventoryData.push({ storeId: storeMathura1._id, medicineId: med._id, price: basePrice + 10, stock: 60 });
     });
-
+    
     await Inventory.insertMany(inventoryData);
 
-    console.log('✅ MEGA Database Seeded with Budaun & Mathura Stores!');
+    console.log('✅ DATABASE SEEDED SUCCESSFULLY: All Categories (Solid, Liquid, Powder) included!');
     process.exit();
   } catch (error) {
     console.error('❌ Error Seeding Data:', error);

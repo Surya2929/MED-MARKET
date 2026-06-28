@@ -12,7 +12,7 @@ export const CartProvider = ({ children }) => {
     localStorage.setItem('medCart', JSON.stringify(cart));
   }, [cart]);
 
-  // 🚀 UPDATED: Ab ye specific quantity accept karega
+  
   const addToCart = (item, qty) => {
     setCart((prev) => {
       const existing = prev.find((i) => i.inventoryId === item.inventoryId);
