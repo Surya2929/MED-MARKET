@@ -12,18 +12,29 @@ export const CartProvider = ({ children }) => {
     localStorage.setItem('medCart', JSON.stringify(cart));
   }, [cart]);
 
-  
   const addToCart = (item, qty) => {
     setCart((prev) => {
       const existing = prev.find((i) => i.inventoryId === item.inventoryId);
       if (existing) {
-        // Agar pehle se cart me hai, to usme purani + nayi quantity jod do
-        return prev.map((i) => i.inventoryId === item.inventoryId ? { ...i, quantity: i.quantity + qty } : i);
+        const newQty = Math.min(existing.quantity + qty, item.stock);
+        return prev.map((i) => i.inventoryId === item.inventoryId ? { ...i, quantity: newQty } : i);
       }
-      // Agar naya hai, to direct selected quantity daal do
-      return [...prev, { ...item, quantity: qty }];
+      return [...prev, { ...item, quantity: Math.min(qty, item.stock) }];
     });
-    alert(`${qty} item(s) added to cart successfully! 🛒`);
+  };
+
+  const updateQuantity = (inventoryId, newQty, stockLimit) => {
+    if (newQty < 1) {
+      removeFromCart(inventoryId);
+      return;
+    }
+    setCart((prev) =>
+      prev.map((item) =>
+        item.inventoryId === inventoryId 
+          ? { ...item, quantity: Math.min(newQty, stockLimit) } 
+          : item
+      )
+    );
   };
 
   const removeFromCart = (inventoryId) => {
@@ -33,7 +44,7 @@ export const CartProvider = ({ children }) => {
   const clearCart = () => setCart([]);
 
   return (
-    <CartContext.Provider value={{ cart, addToCart, removeFromCart, clearCart }}>
+    <CartContext.Provider value={{ cart, addToCart, removeFromCart, clearCart, updateQuantity }}>
       {children}
     </CartContext.Provider>
   );

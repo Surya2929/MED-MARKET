@@ -9,14 +9,28 @@ import { Search, MapPin, ShieldCheck, ShoppingCart, Plus, Minus, Tag, Beaker, Ch
 
 const StoreRow = ({ store, item, isCheapest, onAdd, t, medType }) => {
   const [qty, setQty] = useState(1);
+  
+  // 🚀 FIXED: Simplified Packaging Logic
   let packages = null;
   if (medType === 'liquid') packages = [ { label: '100ml Bottle', multiplier: 1 }, { label: '200ml Bottle', multiplier: 1.8 } ];
-  else if (medType === 'powder') packages = [ { label: '1 Sachet / Unit', multiplier: 1 }, { label: 'Box of 6 Sachets', multiplier: 5.5 } ];
   else if (medType === 'cream') packages = [ { label: '30g Tube', multiplier: 1 }, { label: '50g Tube', multiplier: 1.6 } ];
   
   const [selectedPkg, setSelectedPkg] = useState(packages ? packages[0] : null);
-  const basePrice = (medType === 'solid' || medType === 'powder') ? Math.max(1, Math.round(store.price / 10)) : store.price; 
+  
+  // Simple Price Calculation
+  const basePrice = Math.max(1, Math.round(store.price)); 
   const currentPrice = packages ? Math.round(basePrice * selectedPkg.multiplier) : basePrice;
+
+  // 🚀 FIXED: Manual Typing for Quantity (with Stock Limit)
+  const handleQtyChange = (e) => {
+    let newQty = parseInt(e.target.value) || '';
+    if (newQty > store.stock) newQty = store.stock;
+    setQty(newQty);
+  };
+  
+  const handleQtyBlur = () => {
+    if (qty === '' || qty < 1) setQty(1);
+  };
 
   if (!store) return null;
 
@@ -24,16 +38,11 @@ const StoreRow = ({ store, item, isCheapest, onAdd, t, medType }) => {
     <div className={`flex flex-col sm:flex-row items-center justify-between p-4 mb-3 rounded-lg border transition-all ${isCheapest ? 'bg-emerald-50/40 border-emerald-200' : 'bg-white border-slate-200 hover:border-slate-300'}`}>
       <div className="w-full sm:w-auto flex-1 mb-3 sm:mb-0">
         <div className="flex items-center gap-2 mb-1">
-          <h4 className={`font-bold text-sm ${store.storeName.includes('Express') ? 'text-blue-700' : 'text-slate-800'}`}>
-            {store.storeName}
-          </h4>
+          <h4 className={`font-bold text-sm ${store.storeName.includes('Express') ? 'text-blue-700' : 'text-slate-800'}`}>{store.storeName}</h4>
           {store.isVerified && <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" title="Verified Pharmacy" />}
           {isCheapest && <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold uppercase rounded">{t('bestPrice')}</span>}
         </div>
-        <p className="text-xs text-slate-500 flex items-center gap-1.5">
-          {store.storeName.includes('Express') ? <Truck className="w-3 h-3 text-blue-500" /> : <MapPin className="w-3 h-3 text-slate-400"/>} 
-          {store.address}
-        </p>
+        <p className="text-xs text-slate-500 flex items-center gap-1.5">{store.storeName.includes('Express') ? <Truck className="w-3 h-3 text-blue-500" /> : <MapPin className="w-3 h-3 text-slate-400"/>} {store.address}</p>
       </div>
 
       <div className="w-full sm:w-1/4 mb-4 sm:mb-0 flex justify-start sm:justify-center">
@@ -45,7 +54,7 @@ const StoreRow = ({ store, item, isCheapest, onAdd, t, medType }) => {
             </select>
           </div>
         ) : (
-          <div className="text-xs font-bold text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1 rounded-md border border-slate-200">Per Tablet/Capsule</div>
+          <div className="text-xs font-bold text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1 rounded-md border border-slate-200">Per Unit</div>
         )}
       </div>
       
@@ -55,12 +64,23 @@ const StoreRow = ({ store, item, isCheapest, onAdd, t, medType }) => {
           <span className="text-[10px] text-slate-500 font-medium">{t('inStock')}: <span className="text-emerald-600 font-bold">{store.stock}</span></span>
         </div>
         <div className="flex items-center gap-3">
+          
+          {/* 🚀 EDITABLE QUANTITY BOX */}
           <div className="flex items-center bg-white border border-slate-200 rounded-md shadow-sm h-8">
-            <button onClick={() => setQty(q => Math.max(1, q - 1))} className="px-2 text-slate-500 hover:bg-slate-50"><Minus className="w-3 h-3" /></button>
-            <span className="font-semibold text-slate-700 w-6 text-center text-sm">{qty}</span>
-            <button onClick={() => setQty(q => Math.min(store.stock, q + 1))} className="px-2 text-slate-500 hover:bg-slate-50"><Plus className="w-3 h-3" /></button>
+            <button onClick={() => setQty(q => Math.max(1, q - 1))} className="px-2 text-slate-500 hover:bg-slate-50 h-full border-r"><Minus className="w-3 h-3" /></button>
+            <input 
+              type="number" 
+              value={qty} 
+              onChange={handleQtyChange} 
+              onBlur={handleQtyBlur}
+              className="w-10 text-center text-sm font-bold outline-none no-arrows" 
+              min="1" 
+              max={store.stock}
+            />
+            <button onClick={() => setQty(q => Math.min(store.stock, (parseInt(q)||0) + 1))} className="px-2 text-slate-500 hover:bg-slate-50 h-full border-l"><Plus className="w-3 h-3" /></button>
           </div>
-          <button onClick={() => onAdd(store, item, qty, selectedPkg ? selectedPkg.label : 'Per Unit', currentPrice)} className="bg-slate-900 hover:bg-slate-800 text-white px-3 h-8 rounded-md transition-all shadow-sm text-xs font-semibold flex items-center gap-1.5">
+
+          <button onClick={() => onAdd(store, item, qty || 1, selectedPkg ? selectedPkg.label : 'Per Unit', currentPrice)} className="bg-slate-900 hover:bg-slate-800 text-white px-3 h-8 rounded-md transition-all shadow-sm text-xs font-semibold flex items-center gap-1.5">
             <ShoppingCart className="w-3.5 h-3.5"/> {t('add')}
           </button>
         </div>
@@ -89,17 +109,15 @@ const MedicineCard = ({ item, isAlternative, onAddToCart, t, navigate }) => {
   else if (combinedData.includes('eno') || combinedData.includes('powder') || combinedData.includes('sachet') || combinedData.includes('ors') || combinedData.includes('electral')) medType = 'powder';
   else if (combinedData.includes('cream') || combinedData.includes('gel') || combinedData.includes('ointment') || combinedData.includes('volini') || combinedData.includes('moov')) medType = 'cream';
 
-  let imageUrl = "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?q=80&w=200&auto=format&fit=crop"; 
+  // Dynamic Images
+  let imageUrl = item.medicineInfo.imageUrl || "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?q=80&w=200&auto=format&fit=crop"; 
   let typeLabel = "Tablets / Capsules";
 
-  if (medType === 'liquid') { imageUrl = "https://images.unsplash.com/photo-1607613009820-a29f7bb81c04?q=80&w=200&auto=format&fit=crop"; typeLabel = "Liquid / Syrup / Drops"; } 
-  else if (medType === 'powder') { imageUrl = "https://images.unsplash.com/photo-1616671285444-2e92ed94e1d5?q=80&w=200&auto=format&fit=crop"; typeLabel = "Powder / Sachets"; } 
-  else if (medType === 'cream') { imageUrl = "https://images.unsplash.com/photo-1629198725805-4f36a56e01a0?q=80&w=200&auto=format&fit=crop"; typeLabel = "Cream / Ointment / Gel"; }
-
-  // 🚀 FIX: Navigate properly to details page with complete payload
-  const goToDetails = () => {
-    navigate('/medicine-details', { state: { item, imageUrl, typeLabel, medType } });
-  };
+  if (!item.medicineInfo.imageUrl) {
+    if (medType === 'liquid') { imageUrl = "https://plus.unsplash.com/premium_photo-1675715924046-24ba0da28ae8?q=80&w=200&auto=format&fit=crop"; typeLabel = "Liquid / Syrup / Drops"; } 
+    else if (medType === 'powder') { imageUrl = "https://images.unsplash.com/photo-1616671285444-2e92ed94e1d5?q=80&w=200&auto=format&fit=crop"; typeLabel = "Powder / Sachets"; } 
+    else if (medType === 'cream') { imageUrl = "https://images.unsplash.com/photo-1629198725805-4f36a56e01a0?q=80&w=200&auto=format&fit=crop"; typeLabel = "Cream / Ointment / Gel"; }
+  }
 
   return (
     <div className={`bg-white rounded-[1.5rem] border overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 ${isAlternative ? 'border-amber-200' : 'border-slate-200'}`}>
@@ -109,11 +127,9 @@ const MedicineCard = ({ item, isAlternative, onAddToCart, t, navigate }) => {
         </div>
       )}
       <div className="p-6 md:p-8 flex flex-col md:flex-row gap-8">
-        
-        {/* CLICKABLE AREA FOR DETAILS */}
-        <div onClick={goToDetails} className="flex gap-6 md:w-5/12 cursor-pointer group">
-          <div className="w-24 h-24 sm:w-28 sm:h-28 bg-slate-50 rounded-2xl border border-slate-200 p-2 shrink-0 flex items-center justify-center group-hover:border-blue-400 transition-colors">
-            <img src={imageUrl} alt={typeLabel} className="w-full h-full object-cover rounded-xl shadow-sm mix-blend-multiply" />
+        <div onClick={() => navigate('/medicine-details', { state: { item, imageUrl, typeLabel, medType } })} className="flex gap-6 md:w-5/12 cursor-pointer group">
+          <div className="w-24 h-24 sm:w-28 sm:h-28 bg-white border border-slate-200 p-2 rounded-xl shrink-0 flex items-center justify-center overflow-hidden">
+            <img src={imageUrl} alt={typeLabel} className="w-full h-full object-cover rounded-xl" />
           </div>
           <div>
             <h2 className="text-2xl font-black text-slate-900 mb-1.5 tracking-tight group-hover:text-blue-600 transition-colors">{item.medicineInfo.name}</h2>
@@ -124,42 +140,27 @@ const MedicineCard = ({ item, isAlternative, onAddToCart, t, navigate }) => {
         </div>
 
         <div className="md:w-7/12 flex flex-col justify-center border-t md:border-t-0 md:border-l border-slate-200 pt-6 md:pt-0 md:pl-8">
-          
           <div className="flex bg-slate-100 p-1 rounded-lg mb-4 w-fit border border-slate-200">
-            <button onClick={() => setActiveTab('local')} className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all flex items-center gap-1.5 ${activeTab === 'local' ? 'bg-white text-slate-800 shadow-sm border border-slate-200' : 'text-slate-500 hover:text-slate-700'}`}>
-              <StoreIcon className="w-3.5 h-3.5" /> Nearby Pharmacy ({localStores.length})
-            </button>
-            <button onClick={() => setActiveTab('online')} className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all flex items-center gap-1.5 ${activeTab === 'online' ? 'bg-white text-blue-700 shadow-sm border border-slate-200' : 'text-slate-500 hover:text-slate-700'}`}>
-              <Truck className="w-3.5 h-3.5" /> Online Delivery ({onlineStores.length})
-            </button>
+            <button onClick={() => setActiveTab('local')} className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all flex items-center gap-1.5 ${activeTab === 'local' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'}`}><StoreIcon className="w-3.5 h-3.5" /> Nearby ({localStores.length})</button>
+            <button onClick={() => setActiveTab('online')} className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all flex items-center gap-1.5 ${activeTab === 'online' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500'}`}><Truck className="w-3.5 h-3.5" /> Online Delivery ({onlineStores.length})</button>
           </div>
 
           <div className="max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
             {storesToShow.length > 0 ? (
               <>
                 <StoreRow store={storesToShow[0]} item={item} isCheapest={activeTab === 'online'} onAdd={onAddToCart} t={t} medType={medType} />
-                
                 {storesToShow.length > 1 && (
                   <div className="mt-2">
-                    <button onClick={() => setShowAllStores(!showAllStores)} className="w-full py-2.5 flex items-center justify-center gap-2 text-sm font-bold text-blue-600 bg-blue-50/50 hover:bg-blue-100/50 rounded-xl transition-colors border border-blue-100 border-dashed">
-                      {showAllStores ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                      {showAllStores ? 'Hide' : `View ${storesToShow.length - 1} more`}
-                    </button>
+                    <button onClick={() => setShowAllStores(!showAllStores)} className="w-full py-2.5 flex items-center justify-center gap-2 text-sm font-bold text-blue-600 bg-blue-50/50 hover:bg-blue-100/50 rounded-xl transition-colors border border-blue-100 border-dashed">{showAllStores ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />} {showAllStores ? 'Hide' : `View ${storesToShow.length - 1} more`}</button>
                     {showAllStores && (
                       <div className="mt-4 space-y-2 animate-fade-in bg-slate-50 p-4 rounded-xl border border-slate-200">
-                        {storesToShow.slice(1).map((store) => (
-                          <StoreRow key={store.inventoryId} store={store} item={item} isCheapest={false} onAdd={onAddToCart} t={t} medType={medType} />
-                        ))}
+                        {storesToShow.slice(1).map((store) => <StoreRow key={store.inventoryId} store={store} item={item} isCheapest={false} onAdd={onAddToCart} t={t} medType={medType} />)}
                       </div>
                     )}
                   </div>
                 )}
               </>
-            ) : (
-              <div className="p-4 text-center text-sm text-slate-500 bg-slate-50 rounded-lg border border-slate-200 border-dashed">
-                {activeTab === 'local' ? "Out of stock in nearby pharmacies." : "Not available for online delivery."}
-              </div>
-            )}
+            ) : (<div className="p-4 text-center text-sm text-slate-500 bg-slate-50 rounded-lg border border-slate-200 border-dashed">{activeTab === 'local' ? "Out of stock locally." : "Not available for online delivery."}</div>)}
           </div>
         </div>
       </div>
@@ -172,16 +173,15 @@ const SearchPage = () => {
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [results, setResults] = useState({ exactMatches: [], alternatives: [] });
+  const [nearbyStores, setNearbyStores] = useState([]);
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
-  const [nearbyStores, setNearbyStores] = useState([]);
   
   const { addToCart } = useContext(CartContext);
   const { user } = useContext(AuthContext); 
   const { userLocation, setManualLocation, fetchCurrentLocation } = useContext(LocationContext) || {};
   const { t } = useContext(LanguageContext); 
   const navigate = useNavigate(); 
-
   const [showLocPopup, setShowLocPopup] = useState(false);
   const [locInput, setLocInput] = useState('');
   const [locLoading, setLocLoading] = useState(false);
@@ -224,11 +224,7 @@ const SearchPage = () => {
       const cityToSearch = userLocation?.searchTerm || userLocation?.city?.split(',').pop().trim() || 'All Cities';
       const { data } = await API.get(`/medicines/search?q=${searchTerm}&city=${cityToSearch}`);
       setResults(data);
-    } catch (err) {
-      setResults({ exactMatches: [], alternatives: [] });
-    } finally {
-      setLoading(false);
-    }
+    } catch (err) { setResults({ exactMatches: [], alternatives: [] }); } finally { setLoading(false); }
   };
 
   const handleSearch = (e) => { e.preventDefault(); if (query.trim()) triggerSearch(query); };
@@ -270,11 +266,11 @@ const SearchPage = () => {
                 <div className="absolute top-[110%] left-0 w-80 bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 overflow-hidden animate-fade-in text-left">
                   <div className="p-4 border-b border-slate-100 bg-slate-50"><h3 className="font-bold text-slate-800">Choose your location</h3></div>
                   <div className="p-4">
-                    <div className="flex items-center border border-slate-300 rounded-lg overflow-hidden focus-within:border-blue-600 focus-within:ring-1 focus-within:ring-blue-600 mb-4 bg-white">
+                    <div className="flex items-center border border-slate-300 rounded-lg overflow-hidden focus-within:border-blue-600 mb-4 bg-white">
                       <input type="text" value={locInput} onChange={(e)=>setLocInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if(locInput.trim()){ setLocLoading(true); setManualLocation?.(locInput).then(success => { setLocLoading(false); if(success) setShowLocPopup(false); }); } } }} placeholder="Enter Pincode/City" className="flex-1 px-4 py-2.5 text-sm outline-none text-slate-800" />
                       <button type="button" onClick={async () => { if(locInput.trim()){ setLocLoading(true); const success = await setManualLocation?.(locInput); setLocLoading(false); if(success) setShowLocPopup(false); } }} disabled={locLoading} className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-4 py-2.5 transition-colors font-bold">{locLoading ? 'Saving...' : 'Save'}</button>
                     </div>
-                    <button type="button" onClick={async () => { setLocLoading(true); try { await fetchCurrentLocation?.(); setShowLocPopup(false); } catch(e) {} setLocLoading(false); }} className="w-full flex items-center gap-3 text-blue-600 font-bold text-sm p-3 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-100"><LocateFixed className="w-5 h-5" /> {locLoading ? 'Fetching GPS...' : 'Use current location'}</button>
+                    <button type="button" onClick={async () => { setLocLoading(true); try { await fetchCurrentLocation?.(); setShowLocPopup(false); } catch(e) {} setLocLoading(false); }} className="w-full flex items-center gap-3 text-blue-600 font-bold text-sm p-3 hover:bg-blue-50 rounded-lg transition-colors border border-transparent"><LocateFixed className="w-5 h-5" /> {locLoading ? 'Fetching GPS...' : 'Use current location'}</button>
                   </div>
                 </div>
               )}
@@ -288,8 +284,7 @@ const SearchPage = () => {
                 <div className="absolute top-[105%] left-0 w-full bg-white rounded-xl shadow-2xl border border-slate-200 z-50 overflow-hidden text-left animate-fade-in">
                   {suggestions.map((sug, index) => (
                     <div key={index} onClick={() => triggerSearch(sug.name)} className="px-4 py-3 hover:bg-blue-50 cursor-pointer border-b border-slate-100 last:border-b-0 flex items-center justify-between group transition-colors">
-                      <div><p className="font-bold text-slate-800 text-sm group-hover:text-blue-600 transition-colors">{sug.name}</p><p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">{sug.composition}</p></div>
-                      <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-blue-500 transition-colors" />
+                      <div><p className="font-bold text-slate-800 text-sm group-hover:text-blue-600 transition-colors">{sug.name}</p><p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">{sug.composition}</p></div><ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-blue-500 transition-colors" />
                     </div>
                   ))}
                 </div>
@@ -308,6 +303,7 @@ const SearchPage = () => {
               <div className="bg-white p-6 rounded-xl border border-slate-200 flex items-start gap-4 shadow-sm hover:shadow-md transition"><div className="p-3 bg-emerald-50 rounded-lg text-emerald-600"><ShieldCheck className="w-6 h-6" /></div><div><h4 className="font-bold text-slate-800 text-sm mb-1">{t('genuineDrugs')}</h4><p className="text-slate-500 text-xs leading-relaxed">{t('genuineDrugsDesc')}</p></div></div>
               <div className="bg-white p-6 rounded-xl border border-slate-200 flex items-start gap-4 shadow-sm hover:shadow-md transition"><div className="p-3 bg-indigo-50 rounded-lg text-indigo-600"><Bot className="w-6 h-6" /></div><div><h4 className="font-bold text-slate-800 text-sm mb-1">{t('freeAI')}</h4><p className="text-slate-500 text-xs leading-relaxed">{t('freeAIDesc')}</p></div></div>
             </div>
+
             <div className="mb-12">
               <h3 className="text-xl font-bold text-slate-800 mb-6 border-b border-slate-200 pb-3">Shop by Health Concerns</h3>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -319,6 +315,7 @@ const SearchPage = () => {
                 ))}
               </div>
             </div>
+
             <div className="mb-12">
               <h3 className="text-xl font-bold text-slate-800 mb-6 border-b border-slate-200 pb-3 flex items-center gap-2"><StoreIcon className="w-6 h-6 text-blue-600" /> Nearby Pharmacies in {userLocation?.city?.split(',').pop() || 'your area'}</h3>
               {nearbyStores.length === 0 ? (
@@ -360,9 +357,11 @@ const SearchPage = () => {
 
           {results.alternatives && results.alternatives.length > 0 && (
             <div className="mt-12 pt-8 border-t border-slate-200">
-              <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2"><Lightbulb className="w-6 h-6 text-amber-500" /> {t('cheaperAlt')}</h2>
+              <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
+                <Lightbulb className="w-6 h-6 text-amber-500" /> {t('cheaperAlt')}
+              </h2>
               {results.alternatives.map((item) => (
-                <MedicineCard key={item.medicineInfo._id} item={item} isAlternative={true} onAddToCart={handleAddToCart} t={t} navigate={navigate} />
+                 <MedicineCard key={item.medicineInfo._id} item={item} isAlternative={true} onAddToCart={handleAddToCart} t={t} navigate={navigate} />
               ))}
             </div>
           )}

@@ -7,11 +7,19 @@ const orderSchema = new mongoose.Schema({
     {
       medicineId: { type: mongoose.Schema.Types.ObjectId, ref: 'Medicine' },
       quantity: { type: Number, required: true },
-      price: { type: Number, required: true } // Price at the time of order
+      price: { type: Number, required: true } 
     }
   ],
   totalAmount: { type: Number, required: true },
-  status: { type: String, enum: ['Pending', 'Confirmed', 'Delivered', 'Cancelled'], default: 'Pending' }
+  deliveryAddress: { type: String, required: true }, 
+  prescriptionImage: { type: String }, // 🚀 BASE64 Image String
+  status: { 
+    type: String, 
+    // 🚀 NEW: Added Cancelled & Returned logic
+    enum: ['Pending', 'Accepted', 'Packed', 'Out for Delivery', 'Delivered', 'Cancelled', 'Return Requested', 'Returned'], 
+    default: 'Pending' 
+  },
+  cancelReason: { type: String } // Agar cancel/return kiya toh kyun?
 }, { timestamps: true });
 
 export default mongoose.model('Order', orderSchema);

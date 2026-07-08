@@ -1,241 +1,400 @@
 import { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import API from '../services/api';
-import { Store, PlusCircle, PackageOpen, AlertTriangle, Package, Edit3 } from 'lucide-react';
+import { Store, Package, ShoppingBag, PlusSquare, UploadCloud, X, LayoutDashboard, Database, PieChart, CheckSquare, Trash2, Edit3, Droplets, User, Phone, MapPin, CheckCircle2, AlertTriangle, Clock } from 'lucide-react';
 
 const VendorDashboard = () => {
   const { user } = useContext(AuthContext);
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState('inventory'); 
+  
   const [masterMedicines, setMasterMedicines] = useState([]);
   const [myInventory, setMyInventory] = useState([]);
+  const [myOrders, setMyOrders] = useState([]); 
+  const [storeStatus, setStoreStatus] = useState(null); 
   
-  // States for standard selection
-  const [formData, setFormData] = useState({ medicineId: '', price: '', stock: '' });
-  
-  // States for custom new medicine
+  const [selectedMeds, setSelectedMeds] = useState({});
   const [isCustomMedicine, setIsCustomMedicine] = useState(false);
-  const [customMed, setCustomMed] = useState({ name: '', composition: '', uses: '', price: '', stock: '' });
-
+  
+  // Custom Med State
+  const [customMed, setCustomMed] = useState({ 
+    name: '', composition: '', uses: '', price: '', stock: '', 
+    manufacturer: '', manufactureDate: '', expiryDate: '', image: null 
+  });
+  const [previewUrl, setPreviewUrl] = useState(null);
   const [loading, setLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
 
-  // 🚀 FETCH DATA
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        const masterRes = await API.get('/medicines/master');
-        setMasterMedicines(masterRes.data);
+  const checkLiquidType = (name, composition, dosage) => {
+    const combined = `${name} ${composition} ${dosage}`.toLowerCase();
+    return combined.includes('drop') || combined.includes('syrup') || combined.includes('liquid');
+  };
 
-        const inventoryRes = await API.get('/medicines/vendor-inventory');
-        setMyInventory(inventoryRes.data);
-      } catch (err) {
-        console.error("Failed to fetch dashboard data");
-      } finally {
-        setPageLoading(false);
-      }
-    };
-    if (user?.role === 'vendor') fetchDashboardData();
-  }, [user]);
-
-  // 🚀 ADD OR UPDATE INVENTORY LOGIC
-  const handleAdd = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    
+  const fetchDashboardData = async () => {
     try {
-      if (isCustomMedicine) {
-        // 1. Pehle Master Dictionary me nayi dawai banao
-        const newMedRes = await API.post('/medicines/master', {
-          name: customMed.name,
-          composition: customMed.composition,
-          uses: customMed.uses,
-          sideEffects: "Consult physician",
-          dosage: "As directed by physician"
-        });
-
-        // 2. Fir us dawai ki ID se inventory add karo
-        await API.post('/vendor/inventory', {
-          medicineId: newMedRes.data._id,
-          price: customMed.price,
-          stock: customMed.stock
-        });
-
-        setIsCustomMedicine(false);
-        setCustomMed({ name: '', composition: '', uses: '', price: '', stock: '' });
-
-        // Update dropdown list too
-        const masterRes = await API.get('/medicines/master');
-        setMasterMedicines(masterRes.data);
-
-      } else {
-        // Normal dropdown update
-        await API.post('/vendor/inventory', formData);
-        setFormData({ medicineId: '', price: '', stock: '' });
-      }
-
-      alert('Inventory Updated Successfully! 🎉');
-      
-      // Refresh list
+      const profileRes = await API.get('/users/profile');
+      setStoreStatus(profileRes.data.store); 
+      const masterRes = await API.get('/medicines/master');
+      setMasterMedicines(masterRes.data);
       const inventoryRes = await API.get('/medicines/vendor-inventory');
       setMyInventory(inventoryRes.data);
-    } catch (error) {
-      alert(error.response?.data?.message || 'Failed to update inventory. Try again.');
-    } finally {
-      setLoading(false);
+      if (profileRes.data.store?.isVerified) {
+        const ordersRes = await API.get('/orders/vendor');
+        setMyOrders(ordersRes.data);
+      }
+      const initialSelection = {};
+      inventoryRes.data.forEach(inv => {
+        initialSelection[inv.medicineId._id] = { selected: true, price: inv.price, stock: inv.stock, inventoryId: inv._id };
+      });
+      setSelectedMeds(initialSelection);
+    } catch (err) { console.error(err); } finally { setPageLoading(false); }
+  };
+
+  useEffect(() => {
+    if (!user || user.role !== 'vendor') { navigate('/'); return; }
+    fetchDashboardData();
+  }, [user, navigate]);
+
+  const applyDefaultPrice = (medId) => {
+    const med = masterMedicines.find(m => m._id === medId);
+    handleInputChange(medId, 'price', med.defaultPrice || 50);
+  };
+
+  const handleCheckboxChange = (medId) => {
+    setSelectedMeds(prev => {
+      const current = prev[medId] || { price: '', stock: '', selected: false }; 
+      return { ...prev, [medId]: { ...current, selected: !current.selected } };
+    });
+  };
+
+  const handleSelectAll = (e) => {
+    const isChecked = e.target.checked;
+    const newSelection = { ...selectedMeds };
+    masterMedicines.forEach(med => {
+      if (!newSelection[med._id]) newSelection[med._id] = { price: '', stock: '' }; 
+      newSelection[med._id].selected = isChecked;
+    });
+    setSelectedMeds(newSelection);
+  };
+
+  const handleInputChange = (medId, field, value) => {
+    setSelectedMeds(prev => ({ ...prev, [medId]: { ...prev[medId], [field]: value, selected: true } }));
+  };
+
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) return alert("Image too large (Max 5MB)");
+      const reader = new FileReader();
+      reader.onloadend = () => { setCustomMed({ ...customMed, image: reader.result }); setPreviewUrl(URL.createObjectURL(file)); };
+      reader.readAsDataURL(file);
     }
+  };
+
+  const handleBulkSave = async () => {
+    setLoading(true);
+    try {
+      if (isCustomMedicine) {
+        if (!customMed.name || !customMed.price || !customMed.stock) {
+          alert("Brand Name, Price, and Stock are required!"); setLoading(false); return;
+        }
+        const newMedRes = await API.post('/medicines/master', customMed);
+        await API.post('/vendor/inventory', { medicineId: newMedRes.data._id, price: customMed.price, stock: customMed.stock });
+        setIsCustomMedicine(false); setPreviewUrl(null);
+        setCustomMed({ name: '', composition: '', uses: '', price: '', stock: '', manufacturer: '', manufactureDate: '', expiryDate: '', image: null });
+      } else {
+        const payloadPromises = Object.entries(selectedMeds).filter(([_, d]) => d.selected && d.price && d.stock).map(([id, d]) => API.post('/vendor/inventory', { medicineId: id, price: d.price, stock: d.stock }));
+        await Promise.all(payloadPromises);
+      }
+      alert('Inventory Synced! 🎉');
+      fetchDashboardData();
+    } catch (error) { alert('Sync Failed: Check Data Size'); } finally { setLoading(false); }
+  };
+
+  const handleDeleteItem = async (mid) => {
+    if(!window.confirm("Remove this medicine from store?")) return;
+    try { await API.delete(`/medicines/vendor-inventory/${mid}`); fetchDashboardData(); } catch(e) { alert("Failed"); }
+  };
+
+  const handleUpdateOrderStatus = async (id, status) => {
+    try { await API.put(`/orders/${id}/status`, { status }); fetchDashboardData(); } catch (e) { alert("Failed"); }
   };
 
   const handleEditClick = (item) => {
     setIsCustomMedicine(false);
-    setFormData({ medicineId: item.medicineId._id, price: item.price, stock: item.stock });
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setSelectedMeds(prev => ({ ...prev, [item.medicineId._id]: { selected: true, price: item.price, stock: item.stock } }));
+    window.scrollTo({ top: 0, behavior: 'smooth' }); 
   };
 
-  if (user?.role !== 'vendor') {
-    return (
-      <div className="min-h-[80vh] flex items-center justify-center bg-slate-50">
-        <div className="text-center p-10 bg-white rounded-3xl shadow-lg border border-slate-200">
-          <AlertTriangle className="w-16 h-16 text-rose-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-black text-slate-800">Access Denied</h2>
-          <p className="text-slate-500 font-medium mt-2">This portal is restricted to Verified Pharmacies only.</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (pageLoading) return <div className="text-center py-20 font-bold text-slate-500">Loading Portal...</div>;
-
+  const isAllSelected = masterMedicines.length > 0 && masterMedicines.every(med => selectedMeds[med._id]?.selected);
   const totalProducts = myInventory.length;
   const outOfStock = myInventory.filter(item => item.stock === 0).length;
+  const pendingOrdersCount = myOrders.filter(o => o.status === 'Pending').length;
+  const totalSales = myOrders.filter(o => o.status === 'Delivered').reduce((acc, curr) => acc + curr.totalAmount, 0);
+
+  if (pageLoading) return <div className="h-screen flex items-center justify-center font-bold text-slate-500">Loading Dashboard...</div>;
 
   return (
-    <div className="bg-slate-50 min-h-screen pb-16 font-sans">
+    <div className="bg-slate-50 min-h-screen font-sans text-slate-800">
       
-      <div className="bg-slate-900 pt-10 pb-20">
-        <div className="max-w-6xl mx-auto px-4 flex items-center gap-4">
-          <div className="bg-orange-500 p-3 rounded-xl shadow-lg shadow-orange-500/30">
-            <Store className="w-8 h-8 text-white" />
-          </div>
+      {/* 🚀 COMPACT ADMIN NAVBAR */}
+      <nav className="bg-slate-900 text-white px-6 py-3 flex justify-between items-center sticky top-0 z-50 shadow-md">
+        <div className="flex items-center gap-3">
+          <div className="bg-blue-600 p-2 rounded-lg"><Store size={18}/></div>
           <div>
-            <h1 className="text-3xl font-black text-white">Vendor Portal</h1>
-            <p className="text-slate-400 font-medium text-sm mt-1">Manage your pharmacy inventory & pricing</p>
+            <h1 className="text-sm font-bold uppercase tracking-wider">Vendor Console</h1>
+            <div className="flex items-center gap-2 mt-0.5">
+               <span className="text-[10px] text-slate-300">{storeStatus?.storeName}</span>
+               <span className="w-1 h-1 bg-slate-500 rounded-full"></span>
+               <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase ${storeStatus?.isVerified ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'}`}>
+                 {storeStatus?.isVerified ? 'Verified' : 'Pending'}
+               </span>
+            </div>
           </div>
         </div>
-      </div>
+        <div className="text-right border-l border-slate-700 pl-4">
+           <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Delivered Sales</p>
+           <h3 className="text-lg font-black text-emerald-400">₹{totalSales.toLocaleString()}</h3>
+        </div>
+      </nav>
 
-      <div className="max-w-6xl mx-auto px-4 -mt-10 relative z-10">
-        <div className="grid lg:grid-cols-3 gap-8">
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        <div className="grid lg:grid-cols-4 gap-6">
           
-          <div className="lg:col-span-1 space-y-6">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col gap-2">
-                <div className="bg-blue-50 p-2 rounded-lg text-blue-600 w-fit"><PackageOpen className="w-5 h-5" /></div>
-                <div><h3 className="text-2xl font-black text-slate-800">{totalProducts}</h3><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Active Meds</p></div>
+          {/* 🚀 COMPACT SIDEBAR STATS */}
+          <div className="lg:col-span-1 space-y-4">
+            <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
+              <div><p className="text-[10px] font-bold text-slate-500 uppercase">Live Catalog</p><h3 className="text-2xl font-black text-slate-800">{totalProducts}</h3></div>
+              <Database className="text-blue-500 opacity-20" size={28}/>
+            </div>
+            <div className="bg-white p-5 rounded-xl shadow-sm border border-rose-100 flex items-center justify-between">
+              <div><p className="text-[10px] font-bold text-rose-500 uppercase">Out of Stock</p><h3 className="text-2xl font-black text-rose-600">{outOfStock}</h3></div>
+              <AlertTriangle className="text-rose-500 opacity-20" size={28}/>
+            </div>
+            {!storeStatus?.isVerified && (
+              <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl flex gap-3 items-start">
+                <Clock className="text-amber-600 mt-0.5 shrink-0" size={16}/>
+                <p className="text-xs font-medium text-amber-800 leading-tight">Your Drug License is under review. Selling is disabled until verified.</p>
               </div>
-              <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col gap-2 relative overflow-hidden">
-                {outOfStock > 0 && <div className="absolute top-0 right-0 w-1.5 h-full bg-rose-500 animate-pulse"></div>}
-                <div className="bg-rose-50 p-2 rounded-lg text-rose-600 w-fit"><AlertTriangle className="w-5 h-5" /></div>
-                <div><h3 className="text-2xl font-black text-slate-800">{outOfStock}</h3><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Out of Stock</p></div>
-              </div>
+            )}
+          </div>
+
+          {/* 🚀 MAIN DASHBOARD AREA */}
+          <div className="lg:col-span-3">
+            
+            {/* TABS */}
+            <div className="flex gap-2 mb-6 border-b border-slate-200 pb-2">
+              <button onClick={() => setActiveTab('inventory')} className={`px-4 py-2 text-sm font-bold rounded-t-lg transition-colors ${activeTab === 'inventory' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}>Stock Manager</button>
+              <button onClick={() => setActiveTab('orders')} className={`px-4 py-2 text-sm font-bold rounded-t-lg transition-colors flex items-center gap-2 ${activeTab === 'orders' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}>Orders {pendingOrdersCount > 0 && <span className="bg-rose-500 text-white px-1.5 py-0.5 rounded text-[10px]">{pendingOrdersCount}</span>}</button>
             </div>
 
-            <div className="bg-white p-6 rounded-3xl shadow-xl border border-slate-200 relative overflow-hidden">
-              <h2 className="text-lg font-black text-slate-800 mb-5 flex items-center justify-between border-b border-slate-100 pb-3">
-                <span className="flex items-center gap-2"><PlusCircle className="w-5 h-5 text-orange-500" /> Add Stock</span>
-                <button 
-                  onClick={() => setIsCustomMedicine(!isCustomMedicine)} 
-                  className="text-[10px] bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded text-slate-600 font-bold transition-colors"
-                >
-                  {isCustomMedicine ? 'Use Dictionary' : 'Add Custom Med'}
-                </button>
-              </h2>
-              
-              <form onSubmit={handleAdd} className="space-y-4 animate-fade-in">
+            {activeTab === 'inventory' && (
+              <div className="space-y-6">
                 
-                {/* 🚀 CONDITIONAL RENDER: Dictionary vs Custom Input */}
-                {!isCustomMedicine ? (
-                  <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Select Medicine</label>
-                    <select required value={formData.medicineId} onChange={(e) => setFormData({ ...formData, medicineId: e.target.value })} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-orange-500 text-sm font-bold text-slate-800">
-                      <option value="" className="text-slate-400">-- Choose from Dictionary --</option>
-                      {masterMedicines.map(med => <option key={med._id} value={med._id}>{med.name} ({med.composition})</option>)}
-                    </select>
+                {/* 🚀 DICTIONARY / CUSTOM MED SECTION */}
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                  <div className="px-5 py-3 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                    <h2 className="text-sm font-bold text-slate-700 flex items-center gap-2"><PlusSquare size={16} className="text-blue-600"/> Add Medicine to Store</h2>
+                    <button onClick={() => setIsCustomMedicine(!isCustomMedicine)} className="text-blue-600 text-xs font-bold hover:underline">
+                      {isCustomMedicine ? '← View Master Dictionary' : '+ Create New Medicine'}
+                    </button>
                   </div>
-                ) : (
-                  <div className="space-y-3 bg-orange-50/50 p-3 rounded-xl border border-orange-100">
-                    <p className="text-[10px] text-orange-600 font-bold uppercase tracking-widest text-center mb-2">Create New Medicine</p>
-                    <input type="text" required value={customMed.name} onChange={(e) => setCustomMed({ ...customMed, name: e.target.value })} placeholder="Brand Name (e.g., Combiflam)" className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md outline-none focus:border-orange-500 text-sm font-semibold" />
-                    <input type="text" required value={customMed.composition} onChange={(e) => setCustomMed({ ...customMed, composition: e.target.value })} placeholder="Salt / Composition" className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md outline-none focus:border-orange-500 text-sm font-semibold" />
-                    <input type="text" required value={customMed.uses} onChange={(e) => setCustomMed({ ...customMed, uses: e.target.value })} placeholder="Uses (e.g., Fever, Pain)" className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md outline-none focus:border-orange-500 text-sm font-semibold" />
-                  </div>
-                )}
-                
-                <div className="flex gap-4 pt-2">
-                  <div className="flex-1">
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Price (₹)</label>
-                    <input type="number" required min="1" value={isCustomMedicine ? customMed.price : formData.price} onChange={(e) => isCustomMedicine ? setCustomMed({ ...customMed, price: e.target.value }) : setFormData({ ...formData, price: e.target.value })} placeholder="45" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-orange-500 text-sm font-bold text-slate-800" />
-                  </div>
-                  <div className="flex-1">
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Quantity</label>
-                    <input type="number" required min="0" value={isCustomMedicine ? customMed.stock : formData.stock} onChange={(e) => isCustomMedicine ? setCustomMed({ ...customMed, stock: e.target.value }) : setFormData({ ...formData, stock: e.target.value })} placeholder="100" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-orange-500 text-sm font-bold text-slate-800" />
+
+                  <div className="p-5">
+                      {isCustomMedicine ? (
+                        <div className="space-y-4">
+                          <div className="flex flex-col md:flex-row gap-6">
+                            
+                            {/* Compact Image Upload */}
+                            <div className="w-full md:w-1/4">
+                              {!previewUrl ? (
+                                <label className="border border-dashed border-slate-300 rounded-lg h-32 flex flex-col items-center justify-center cursor-pointer bg-slate-50 hover:bg-slate-100 transition-colors">
+                                  <UploadCloud className="text-slate-400 mb-1" size={24}/>
+                                  <span className="text-[10px] font-bold text-slate-500 uppercase">Upload Image</span>
+                                  <input type="file" onChange={handleImageUpload} className="hidden" />
+                                </label>
+                              ) : (
+                                <div className="relative h-32 rounded-lg overflow-hidden border border-slate-200">
+                                  <img src={previewUrl} className="w-full h-full object-contain p-2 bg-white" />
+                                  <button type="button" onClick={() => setPreviewUrl(null)} className="absolute top-1 right-1 bg-rose-500 text-white p-1 rounded-md shadow-md"><X size={12}/></button>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Compact Form Grid */}
+                            <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-3">
+                              <div className="md:col-span-2">
+                                <label className="text-[10px] font-bold text-slate-500 mb-1 block">Brand Name</label>
+                                <input type="text" value={customMed.name} onChange={e=>setCustomMed({...customMed, name: e.target.value})} className="w-full p-2 text-sm border border-slate-200 rounded-md outline-none focus:border-blue-500" placeholder="e.g. Crocin 650" />
+                              </div>
+                              <div>
+                                <label className="text-[10px] font-bold text-slate-500 mb-1 block">Price (₹)</label>
+                                <input type="number" value={customMed.price} onChange={e=>setCustomMed({...customMed, price: e.target.value})} className="w-full p-2 text-sm border border-slate-200 rounded-md outline-none focus:border-blue-500" placeholder="0" />
+                              </div>
+                              <div>
+                                <label className="text-[10px] font-bold text-slate-500 mb-1 block">Manufacturer</label>
+                                <input type="text" value={customMed.manufacturer} onChange={e=>setCustomMed({...customMed, manufacturer: e.target.value})} className="w-full p-2 text-sm border border-slate-200 rounded-md outline-none focus:border-blue-500" placeholder="Company Name" />
+                              </div>
+                              <div>
+                                <label className="text-[10px] font-bold text-slate-500 mb-1 block">Composition</label>
+                                <input type="text" value={customMed.composition} onChange={e=>setCustomMed({...customMed, composition: e.target.value})} className="w-full p-2 text-sm border border-slate-200 rounded-md outline-none focus:border-blue-500" placeholder="Salt details" />
+                              </div>
+                              <div>
+                                <label className="text-[10px] font-bold text-slate-500 mb-1 block">Initial Stock</label>
+                                <input type="number" value={customMed.stock} onChange={e=>setCustomMed({...customMed, stock: e.target.value})} className="w-full p-2 text-sm border border-slate-200 rounded-md outline-none focus:border-blue-500" placeholder="0" />
+                              </div>
+                              <div>
+                                <label className="text-[10px] font-bold text-slate-500 mb-1 block">Mfg Date</label>
+                                <input type="date" value={customMed.manufactureDate} onChange={e=>setCustomMed({...customMed, manufactureDate: e.target.value})} className="w-full p-2 text-sm border border-slate-200 rounded-md outline-none focus:border-blue-500 text-slate-600" />
+                              </div>
+                              <div>
+                                <label className="text-[10px] font-bold text-slate-500 mb-1 block">Exp Date</label>
+                                <input type="date" value={customMed.expiryDate} onChange={e=>setCustomMed({...customMed, expiryDate: e.target.value})} className="w-full p-2 text-sm border border-slate-200 rounded-md outline-none focus:border-blue-500 text-slate-600" />
+                              </div>
+                              <div className="md:col-span-3">
+                                <label className="text-[10px] font-bold text-slate-500 mb-1 block">Usage / Indications</label>
+                                <textarea value={customMed.uses} onChange={e=>setCustomMed({...customMed, uses: e.target.value})} className="w-full p-2 text-sm border border-slate-200 rounded-md outline-none focus:border-blue-500 resize-none" rows="2" placeholder="What is this used for?" />
+                              </div>
+                            </div>
+                          </div>
+                          <button onClick={handleBulkSave} disabled={loading} className="w-full bg-slate-800 hover:bg-slate-900 text-white py-3 rounded-lg font-bold text-sm transition-colors">
+                            {loading ? 'Processing...' : 'Save & Add to Inventory'}
+                          </button>
+                        </div>
+                      ) : (
+                        <div>
+                          <div className="flex justify-between items-center mb-3">
+                             <p className="text-xs text-slate-500">Select medicines from dictionary and set your price.</p>
+                             <button onClick={handleBulkSave} className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg text-xs font-bold shadow-sm transition-colors">Save Selected</button>
+                          </div>
+                          
+                          {/* 🚀 COMPACT TABLE */}
+                          <div className="max-h-[350px] overflow-y-auto border border-slate-200 rounded-lg">
+                            <table className="w-full text-left text-sm">
+                              <thead className="sticky top-0 bg-slate-100 z-10 border-b border-slate-200">
+                                <tr>
+                                  <th className="p-3 w-10 text-center"><input type="checkbox" checked={isAllSelected} onChange={handleSelectAll} className="w-4 h-4 cursor-pointer" /></th>
+                                  <th className="p-3 font-semibold text-slate-600">Medicine Name</th>
+                                  <th className="p-3 font-semibold text-slate-600 w-32">Price (₹)</th>
+                                  <th className="p-3 font-semibold text-slate-600 w-24">Stock</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-100">
+                                {masterMedicines.map(med => {
+                                   const isSelected = selectedMeds[med._id]?.selected || false;
+                                   return (
+                                  <tr key={med._id} className={`${isSelected ? 'bg-blue-50/40' : 'hover:bg-slate-50'}`}>
+                                    <td className="p-3 text-center"><input type="checkbox" checked={isSelected} onChange={()=>handleCheckboxChange(med._id)} className="w-4 h-4 cursor-pointer" /></td>
+                                    <td className="p-3">
+                                      <p className="font-bold text-slate-800">{med.name}</p>
+                                      <p className="text-[10px] text-slate-500">{med.composition}</p>
+                                    </td>
+                                    <td className="p-3">
+                                      <div className="flex items-center gap-1">
+                                        <input type="number" disabled={!isSelected} value={selectedMeds[med._id]?.price || ''} onChange={e=>handleInputChange(med._id, 'price', e.target.value)} className="w-full p-1.5 border border-slate-300 rounded text-sm disabled:bg-slate-100 outline-none focus:border-blue-500" placeholder="00" />
+                                        <button onClick={()=>applyDefaultPrice(med._id)} disabled={!isSelected} className="p-1.5 bg-emerald-50 text-emerald-600 rounded border border-emerald-100 hover:bg-emerald-100 disabled:opacity-50" title="Apply Default ₹50"><CheckSquare size={14}/></button>
+                                      </div>
+                                    </td>
+                                    <td className="p-3"><input type="number" disabled={!isSelected} value={selectedMeds[med._id]?.stock || ''} onChange={e=>handleInputChange(med._id, 'stock', e.target.value)} className="w-full p-1.5 border border-slate-300 rounded text-sm disabled:bg-slate-100 outline-none focus:border-blue-500" placeholder="0" /></td>
+                                  </tr>
+                                )})}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )}
                   </div>
                 </div>
-                
-                <button type="submit" disabled={loading} className="w-full bg-slate-900 text-white py-3.5 rounded-xl hover:bg-slate-800 font-black text-sm transition-all shadow-md mt-4 flex items-center justify-center gap-2">
-                  {loading ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span> : null}
-                  {loading ? 'Processing...' : 'Save to Inventory'}
-                </button>
-              </form>
-            </div>
-          </div>
 
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden h-full min-h-[500px] flex flex-col">
-              <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                <h2 className="text-lg font-black text-slate-800 flex items-center gap-2"><Package className="w-5 h-5 text-blue-600" /> My Store Inventory</h2>
-              </div>
-              
-              <div className="flex-1 overflow-y-auto custom-scrollbar p-2">
-                {myInventory.length === 0 ? (
-                  <div className="h-full flex flex-col items-center justify-center text-slate-400 py-20">
-                    <PackageOpen className="w-12 h-12 mb-3 opacity-20" />
-                    <p className="font-bold">Your inventory is empty.</p>
-                    <p className="text-sm">Add medicines using the form.</p>
+                {/* 🚀 LIVE INVENTORY TABLE */}
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                  <div className="px-5 py-3 border-b border-slate-100 bg-slate-50"><h2 className="text-sm font-bold text-slate-700 flex items-center gap-2"><Database className="text-emerald-500" size={16}/> Live Inventory Feed</h2></div>
+                  <div className="max-h-[400px] overflow-y-auto">
+                     {myInventory.length === 0 ? <div className="py-10 text-center text-slate-400 text-sm font-medium">No medicines in your store.</div> : (
+                        <table className="w-full text-left text-sm">
+                          <thead className="bg-white sticky top-0 border-b border-slate-200 z-10 text-[11px] uppercase text-slate-500">
+                             <tr><th className="p-4">Product</th><th className="p-4 text-center">Price</th><th className="p-4 text-center">Stock</th><th className="p-4 text-right">Actions</th></tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                           {myInventory.map(item => {
+                             const isLiquid = checkLiquidType(item.medicineId?.name, item.medicineId?.composition, item.medicineId?.dosage);
+                             return (
+                              <tr key={item._id} className="hover:bg-slate-50">
+                                <td className="p-4">
+                                  <div className="flex items-center gap-3">
+                                    {item.medicineId?.imageUrl ? <img src={item.medicineId.imageUrl} className="w-10 h-10 object-contain border border-slate-200 rounded p-1" /> : <div className="w-10 h-10 bg-slate-100 rounded border border-slate-200 flex items-center justify-center"><Package className="text-slate-400" size={16}/></div>}
+                                    <div>
+                                      <p className="font-bold text-slate-800">{item.medicineId?.name}</p>
+                                      <div className="flex items-center gap-2 mt-0.5">
+                                        <p className="text-[10px] text-slate-500">{item.medicineId?.manufacturer || 'Unknown'}</p>
+                                        {isLiquid && <span className="text-[9px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded flex items-center gap-1 border border-blue-100"><Droplets size={10}/> Liquid</span>}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="p-4 text-center font-bold text-slate-900">₹{item.price}</td>
+                                <td className="p-4 text-center">
+                                  <span className={`px-2 py-1 rounded text-xs font-bold ${item.stock > 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>{item.stock}</span>
+                                </td>
+                                <td className="p-4 text-right">
+                                   <button onClick={()=>handleEditClick(item)} className="p-2 text-blue-600 hover:bg-blue-50 rounded mr-1 transition-colors"><Edit3 size={16}/></button>
+                                   <button onClick={()=>handleDeleteItem(item.medicineId?._id)} className="p-2 text-rose-500 hover:bg-rose-50 rounded transition-colors"><Trash2 size={16}/></button>
+                                </td>
+                              </tr>
+                             )
+                           })}
+                          </tbody>
+                        </table>
+                     )}
                   </div>
-                ) : (
-                  <table className="w-full text-left text-sm text-slate-600">
-                    <thead className="bg-white sticky top-0 z-10 border-b border-slate-200">
-                      <tr>
-                        <th className="p-4 font-bold text-xs uppercase tracking-widest text-slate-400">Medicine Name</th>
-                        <th className="p-4 font-bold text-xs uppercase tracking-widest text-slate-400 text-center">Price</th>
-                        <th className="p-4 font-bold text-xs uppercase tracking-widest text-slate-400 text-center">Stock</th>
-                        <th className="p-4 font-bold text-xs uppercase tracking-widest text-slate-400 text-right">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {myInventory.map(item => (
-                        <tr key={item._id} className="hover:bg-slate-50 transition-colors">
-                          <td className="p-4">
-                            <p className="font-bold text-slate-900 text-base">{item.medicineId?.name || 'Unknown Medicine'}</p>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{item.medicineId?.composition || 'No Salt Info'}</p>
-                          </td>
-                          <td className="p-4 text-center font-black text-slate-800 text-lg">₹{item.price}</td>
-                          <td className="p-4 text-center">
-                            {item.stock > 0 ? <span className="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-md font-bold text-xs">{item.stock} Units</span> : <span className="bg-rose-100 text-rose-700 px-3 py-1 rounded-md font-bold text-xs animate-pulse">Out of Stock</span>}
-                          </td>
-                          <td className="p-4 text-right">
-                            <button onClick={() => handleEditClick(item)} className="p-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors inline-flex items-center gap-1 font-bold text-xs">
-                              <Edit3 className="w-4 h-4"/> Edit
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
+                </div>
               </div>
-            </div>
-          </div>
+            )}
 
+            {/* 🚀 ORDERS TAB (Standard Clean View) */}
+            {activeTab === 'orders' && (
+               <div className="space-y-4">
+                  {myOrders.length === 0 ? <div className="bg-white rounded-xl border border-slate-200 p-16 text-center text-slate-400 font-medium">No active orders found.</div> : (
+                     myOrders.map(order => (
+                        <div key={order._id} className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm flex flex-col md:flex-row justify-between gap-6">
+                           <div className="flex-1">
+                             <div className="flex items-center gap-3 mb-4">
+                               <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded">ID: #{order._id.slice(-6)}</span>
+                               <span className={`text-[10px] font-bold uppercase px-2 py-1 rounded border ${order.status === 'Pending' ? 'bg-amber-50 text-amber-600 border-amber-200' : 'bg-blue-50 text-blue-600 border-blue-200'}`}>{order.status}</span>
+                             </div>
+                             <h4 className="text-lg font-bold text-slate-800 flex items-center gap-2"><User size={16} className="text-slate-400"/> {order.customerId?.name}</h4>
+                             <p className="text-xs text-slate-500 mt-1 flex items-center gap-3"><span className="flex items-center gap-1"><Phone size={12}/> {order.customerId?.phone}</span> <span className="flex items-center gap-1"><MapPin size={12}/> {order.deliveryAddress}</span></p>
+                             
+                             <div className="mt-4 border-t border-slate-100 pt-4 space-y-2">
+                                {order.items.map((item, idx) => (
+                                   <div key={idx} className="flex justify-between text-sm">
+                                     <span className="text-slate-700 font-medium"><span className="font-bold text-slate-900 mr-2">{item.quantity}x</span>{item.medicineId?.name}</span>
+                                     <span className="font-bold text-slate-800">₹{item.price * item.quantity}</span>
+                                   </div>
+                                ))}
+                             </div>
+                           </div>
+
+                           <div className="md:w-64 border-t md:border-t-0 md:border-l border-slate-100 pt-4 md:pt-0 md:pl-6 flex flex-col justify-between">
+                              <div className="text-right">
+                                 <p className="text-xs text-slate-500 uppercase font-bold">Total Bill</p>
+                                 <h3 className="text-3xl font-black text-slate-900 mt-1">₹{order.totalAmount}</h3>
+                              </div>
+                              <div className="mt-6 space-y-2">
+                                 {order.status === 'Pending' && <button onClick={() => handleUpdateOrderStatus(order._id, 'Accepted')} className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg text-sm font-bold transition-colors">Approve Order</button>}
+                                 {order.status === 'Accepted' && <button onClick={() => handleUpdateOrderStatus(order._id, 'Packed')} className="w-full bg-amber-500 hover:bg-amber-600 text-white py-2.5 rounded-lg text-sm font-bold transition-colors">Mark Packed</button>}
+                                 {order.status === 'Packed' && <button onClick={() => handleUpdateOrderStatus(order._id, 'Out for Delivery')} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-lg text-sm font-bold transition-colors">Ship Order</button>}
+                                 {order.status === 'Out for Delivery' && <button onClick={() => handleUpdateOrderStatus(order._id, 'Delivered')} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-colors"><CheckCircle2 size={16}/> Delivered</button>}
+                                 {order.status === 'Delivered' && <div className="w-full bg-slate-50 text-slate-500 py-2.5 rounded-lg text-sm font-bold text-center border border-slate-200">Completed ✅</div>}
+                              </div>
+                           </div>
+                        </div>
+                     ))
+                  )}
+               </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

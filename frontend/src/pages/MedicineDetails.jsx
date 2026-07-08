@@ -1,128 +1,140 @@
-import { useLocation, useNavigate } from 'react-router-dom';
-import { ShieldCheck, Info, HelpCircle, Activity, AlertTriangle, ChevronLeft } from 'lucide-react';
+import { useState, useEffect, useContext } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { CartContext } from '../context/CartContext';
+import API from '../services/api';
+import { ChevronLeft, ShoppingCart, ShieldCheck, Building2, FlaskConical, Calendar, AlertCircle, ImageOff } from 'lucide-react';
 
-const MedicineDetails = () => {
-  const location = useLocation();
+const MedicineDetail = () => {
+  const { id } = useParams();
   const navigate = useNavigate();
+  const { cart } = useContext(CartContext);
+  
+  const [medicine, setMedicine] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
-  if (!location.state || !location.state.item) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <button onClick={() => navigate('/')} className="text-blue-600 font-bold underline">Go Back to Search</button>
-      </div>
-    );
-  }
+  useEffect(() => {
+    const fetchMed = async () => {
+      try {
+        setLoading(true);
+        // Fetch all master medicines to find the specific one
+        const res = await API.get('/medicines/master');
+        const foundMed = res.data.find(m => String(m._id) === String(id));
+        
+        if (foundMed) {
+          setMedicine(foundMed);
+        } else {
+          setError(true);
+        }
+      } catch (err) { 
+        console.error("Detail Fetch Error:", err); 
+        setError(true);
+      } finally { 
+        setLoading(false); 
+      }
+    };
+    
+    if(id) fetchMed();
+  }, [id]);
 
-  const { item, imageUrl, typeLabel, medType } = location.state;
-  const { medicineInfo } = item;
+  // 🚀 Loading State
+  if (loading) return (
+    <div className="h-screen bg-slate-50 flex flex-col items-center justify-center">
+      <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+      <p className="font-bold text-slate-500">Fetching Medicine Details...</p>
+    </div>
+  );
 
-  // 🚀 FIX: Safety checks to prevent split() crashes if data is missing
-  const usesList = medicineInfo?.uses ? medicineInfo.uses.split(',') : ["Consult your physician for uses"];
-  const sideEffectsList = medicineInfo?.sideEffects ? medicineInfo.sideEffects.split(',') : ["No common side effects reported", "Consult a doctor if you feel unwell"];
+  // 🚀 Error / Not Found State
+  if (error || !medicine) return (
+    <div className="h-screen bg-slate-50 flex flex-col items-center justify-center">
+      <AlertCircle size={50} className="text-rose-400 mb-4" />
+      <h2 className="text-xl font-bold text-slate-800">Medicine Not Found</h2>
+      <p className="text-slate-500 mb-6">The requested medicine details are unavailable.</p>
+      <button onClick={() => navigate(-1)} className="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold">Go Back</button>
+    </div>
+  );
 
   return (
-    <div className="bg-slate-50 min-h-screen pb-16 font-sans">
+    <div className="bg-slate-50 min-h-screen pb-20 font-sans">
       
-      <div className="bg-white border-b border-slate-200 py-4 sticky top-0 z-40 shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 flex items-center">
-          <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-slate-500 hover:text-slate-800 font-bold text-sm transition-colors">
-            <ChevronLeft className="w-5 h-5" /> Back to Search Results
-          </button>
-        </div>
+      {/* 🚀 HEADER WITH BACK BUTTON */}
+      <div className="bg-white border-b border-slate-200 sticky top-0 z-50 px-4 py-3 flex items-center justify-between shadow-sm">
+        <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-slate-600 hover:text-blue-600 font-semibold transition-colors bg-slate-100 px-3 py-1.5 rounded-lg">
+          <ChevronLeft size={18}/> Back
+        </button>
+        <span className="text-sm font-bold text-slate-800 truncate px-4">{medicine.name}</span>
+        <button onClick={() => navigate('/cart')} className="relative p-2 text-slate-600 hover:text-blue-600 bg-slate-100 rounded-lg">
+          <ShoppingCart size={18}/>
+          {cart.length > 0 && <span className="absolute -top-1 -right-1 bg-rose-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">{cart.length}</span>}
+        </button>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        
-        <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col md:flex-row mb-8">
-          <div className="w-full md:w-5/12 bg-slate-50 p-8 flex items-center justify-center border-b md:border-b-0 md:border-r border-slate-100">
-            <img src={imageUrl || "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?q=80&w=200&auto=format&fit=crop"} alt={medicineInfo?.name || "Medicine"} className="w-64 h-64 object-cover rounded-2xl shadow-lg mix-blend-multiply border-4 border-white" />
-          </div>
+      <div className="max-w-5xl mx-auto px-4 mt-8">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col md:flex-row">
           
-          <div className="w-full md:w-7/12 p-8 lg:p-12 flex flex-col justify-center">
-            <h1 className="text-3xl md:text-4xl font-black text-slate-900 mb-2 tracking-tight">{medicineInfo?.name || "Unknown Medicine"}</h1>
-            <p className="text-sm text-slate-500 font-medium mb-6">by MedMarket Verified Partners</p>
-            
-            <div className="flex items-center gap-4 mb-6 pb-6 border-b border-slate-100">
-              <span className="bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-widest flex items-center gap-1.5 border border-emerald-200">
-                <ShieldCheck className="w-4 h-4" /> 100% Genuine
-              </span>
-              <span className="bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-widest">
-                {typeLabel || "Standard Medicine"}
-              </span>
-            </div>
-
-            <div className="space-y-4">
-              <p className="text-sm text-slate-600 leading-relaxed">
-                <strong className="text-slate-800 font-bold block mb-1">Key Ingredients / Salt:</strong> 
-                <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded font-semibold text-xs border border-blue-100 inline-block">
-                  {medicineInfo?.composition || "Information not available"}
-                </span>
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-8 lg:p-12">
-          <h2 className="text-2xl font-black text-slate-800 mb-8 border-b border-slate-100 pb-4">Product Information</h2>
-          
-          <div className="space-y-10">
-            <div>
-              <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2 mb-3">
-                <Activity className="w-5 h-5 text-blue-500" /> Indications & Uses
-              </h3>
-              <ul className="list-disc pl-6 space-y-2 text-slate-600 font-medium text-sm leading-relaxed">
-                {usesList.map((use, idx) => (
-                  <li key={idx}>{use.trim()}</li>
-                ))}
-              </ul>
-            </div>
-
-            <div>
-              <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2 mb-3">
-                <Info className="w-5 h-5 text-emerald-500" /> Recommended Dosage
-              </h3>
-              <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-xl text-emerald-800 text-sm font-semibold">
-                {medicineInfo?.dosage || "Take as directed by your physician."}
+          {/* 🚀 PHOTO SECTION (100% FIXED FOR BASE64) */}
+          <div className="md:w-5/12 bg-slate-50 border-r border-slate-100 flex items-center justify-center p-8 relative min-h-[300px]">
+            {medicine.imageUrl && medicine.imageUrl.length > 100 ? (
+              // If image exists and is a valid long base64 string
+              <img src={medicine.imageUrl} alt={medicine.name} className="max-w-full max-h-[350px] object-contain drop-shadow-md rounded-xl" />
+            ) : (
+              // Fallback if no image is uploaded
+              <div className="text-slate-400 flex flex-col items-center bg-white p-10 rounded-2xl shadow-sm border border-slate-100">
+                <ImageOff size={48} strokeWidth={1.5} className="mb-3 text-slate-300"/>
+                <p className="text-xs font-bold uppercase tracking-widest">No Image Provided</p>
               </div>
+            )}
+            <div className="absolute top-4 left-4 bg-emerald-500 text-white text-[10px] font-bold px-3 py-1 rounded-full flex items-center gap-1 shadow-sm uppercase tracking-widest">
+              <ShieldCheck size={12}/> Verified
             </div>
+          </div>
 
-            <div>
-              <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2 mb-3">
-                <AlertTriangle className="w-5 h-5 text-amber-500" /> Safety Information & Side Effects
-              </h3>
-              <ul className="list-disc pl-6 space-y-2 text-slate-600 font-medium text-sm leading-relaxed">
-                {sideEffectsList.map((effect, idx) => (
-                  <li key={idx}>{effect.trim()}</li>
-                ))}
-                <li>Keep medicines out of reach of children.</li>
-                <li>Store in a cool and dry place, away from sunlight.</li>
-                <li>Use strictly under medical supervision.</li>
-              </ul>
-            </div>
-
-            <div className="border-t border-slate-100 pt-8">
-              <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2 mb-6">
-                <HelpCircle className="w-5 h-5 text-purple-500" /> Frequently Asked Questions
-              </h3>
+          {/* 🚀 DETAILS SECTION */}
+          <div className="md:w-7/12 p-6 md:p-10 flex flex-col justify-between">
+            <div className="space-y-6">
               
-              <div className="space-y-6">
-                <div>
-                  <h4 className="font-bold text-slate-800 text-sm mb-1">Q. What is {medicineInfo?.name} used for?</h4>
-                  <p className="text-sm text-slate-600">It is primarily used for the treatment of {usesList[0]?.toLowerCase() || 'medical conditions'}. Please consult a physician for detailed guidance.</p>
-                </div>
-                <div>
-                  <h4 className="font-bold text-slate-800 text-sm mb-1">Q. How should I store this product?</h4>
-                  <p className="text-sm text-slate-600">It is recommended to store this product at room temperature, away from direct heat and sunlight.</p>
+              <div>
+                <h1 className="text-3xl font-black text-slate-900 leading-tight">{medicine.name}</h1>
+                <div className="flex flex-wrap items-center gap-3 mt-4">
+                  <span className="flex items-center gap-1.5 text-xs font-bold text-slate-600 bg-slate-100 px-3 py-1.5 rounded-md uppercase tracking-wider">
+                    <Building2 size={14} className="text-blue-500"/> {medicine.manufacturer || "Generic Pharma"}
+                  </span>
+                  <span className="flex items-center gap-1.5 text-xs font-bold text-slate-600 bg-slate-100 px-3 py-1.5 rounded-md uppercase tracking-wider">
+                    <FlaskConical size={14} className="text-blue-500"/> {medicine.composition || "Salt Details Not Added"}
+                  </span>
                 </div>
               </div>
-            </div>
 
+              <div>
+                 <h4 className="text-xs font-bold text-slate-400 uppercase mb-2 tracking-widest">Therapeutic Uses</h4>
+                 <p className="text-slate-700 text-sm leading-relaxed bg-blue-50/50 p-4 rounded-xl border border-blue-50 font-medium">
+                   {medicine.uses || "Indications and usage guidelines are not specified by the vendor."}
+                 </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-6">
+                <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col justify-center">
+                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-1"><Calendar size={12}/> Mfg. Date</p>
+                   <p className="text-sm font-black text-slate-800">{medicine.manufactureDate ? new Date(medicine.manufactureDate).toLocaleDateString('en-GB') : "Check Packaging"}</p>
+                </div>
+                <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col justify-center">
+                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-1"><Calendar size={12}/> Exp. Date</p>
+                   <p className="text-sm font-black text-rose-600">{medicine.expiryDate ? new Date(medicine.expiryDate).toLocaleDateString('en-GB') : "Check Packaging"}</p>
+                </div>
+              </div>
+
+              <div className="bg-amber-50 p-4 rounded-xl flex gap-3 border border-amber-200 mt-4">
+                 <AlertCircle className="text-amber-500 shrink-0" size={20}/>
+                 <p className="text-xs font-bold text-amber-800 leading-tight">Please read the label carefully before use. Strictly to be used under medical supervision.</p>
+              </div>
+
+            </div>
           </div>
         </div>
-
       </div>
     </div>
   );
 };
 
-export default MedicineDetails;
+export default MedicineDetail;

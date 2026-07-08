@@ -1,8 +1,12 @@
 import User from '../models/User.js';
 import Store from '../models/Store.js';
+import Inventory from '../models/Inventory.js';
+import Report from '../models/Report.js';
 import bcrypt from 'bcryptjs';
 
-// @desc    Get user profile
+// ==========================================
+// 1. PROFILE MANAGEMENT (User & Vendor)
+// ==========================================
 export const getUserProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user._id).select('-password');
@@ -16,7 +20,6 @@ export const getUserProfile = async (req, res) => {
   } catch (error) { res.status(500).json({ message: error.message }); }
 };
 
-// @desc    Update user profile & password
 export const updateUserProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
@@ -46,9 +49,8 @@ export const updateUserProfile = async (req, res) => {
 };
 
 // ==========================================
-// 🚀 ADMIN DASHBOARD CONTROLLERS
+// 2. ADMIN DASHBOARD CONTROLLERS
 // ==========================================
-
 export const getAllUsers = async (req, res) => {
   try {
     const users = await User.find({ role: { $ne: 'admin' } }).select('-password');
@@ -86,4 +88,83 @@ export const verifyStore = async (req, res) => {
     await store.save();
     res.status(200).json({ message: store.isVerified ? 'Store Verified' : 'Store Verification Revoked' });
   } catch (error) { res.status(500).json({ message: error.message }); }
+};
+
+export const rejectVendor = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    await Store.findOneAndDelete({ vendorId: user._id });
+    await User.findByIdAndDelete(req.params.id);
+
+    res.status(200).json({ message: 'Vendor Request Rejected and Deleted' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// 🚀 FIX: This function was missing! Admin views specific store's inventory
+export const getStoreInventoryForAdmin = async (req, res) => {
+  try {
+    const { storeId } = req.params;
+    const inventory = await Inventory.find({ storeId }).populate('medicineId', 'name composition');
+    res.status(200).json(inventory);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// ==========================================
+// 3. REPORTS & COMPLAINTS CONTROLLERS
+// ==========================================
+export const createReport = async (req, res) => {
+  try {
+    const { reportedUserId, reportedStoreId, orderId, reason, description } = req.body;
+    
+    if (!reason || !description) return res.status(400).json({ message: "Reason and Description are required" });
+
+    const report = await Report.create({
+      reportedBy: req.user._id,
+      reportedUser: reportedUserId || null,
+      reportedStore: reportedStoreId || null,
+      orderId: orderId || null,
+      reason,
+      description
+    });
+
+    res.status(201).json({ message: "Report submitted successfully!", report });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const getAllReports = async (req, res) => {
+  try {
+    const reports = await Report.find()
+      .populate('reportedBy', 'name role email phone')
+      .populate('reportedUser', 'name role email phone isBlocked')
+      .populate('reportedStore', 'storeName address')
+      .populate('orderId', '_id totalAmount status')
+      .sort({ createdAt: -1 });
+
+    res.status(200).json(reports);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const updateReportStatus = async (req, res) => {
+  try {
+    const { status } = req.body;
+    const report = await Report.findById(req.params.id);
+    if (!report) return res.status(404).json({ message: "Report not found" });
+
+    report.status = status;
+    await report.save();
+
+    res.status(200).json({ message: `Report marked as ${status}`, report });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 };

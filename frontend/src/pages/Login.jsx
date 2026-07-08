@@ -1,7 +1,8 @@
 import { useState, useContext } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { LogIn, User, Store, Mail, Lock, ShieldPlus, Phone, KeyRound, ShieldAlert, Eye, EyeOff } from 'lucide-react'; // 🚀 FIX: IMPORTED ALL ICONS
+import API from '../services/api'; // 🚀 FIX: Imported API for sending OTP
+import { LogIn, User, Store, Mail, Lock, ShieldPlus, Phone, KeyRound, ShieldAlert, Eye, EyeOff } from 'lucide-react';
 
 const Login = () => {
   const [role, setRole] = useState('customer');
@@ -11,22 +12,27 @@ const Login = () => {
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
   const [otpSent, setOtpSent] = useState(false);
-  const [showPassword, setShowPassword] = useState(false); // 🚀 NEW: State for Eye Button
+  const [showPassword, setShowPassword] = useState(false); 
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   
-  const { login, demoOtpLogin, logout } = useContext(AuthContext); 
+  const { login, otpLogin, logout } = useContext(AuthContext); // 🚀 FIX: using real otpLogin
   const navigate = useNavigate();
 
-  const handleSendOTP = () => {
+  // 🚀 FIX: Request backend to send/verify OTP
+  const handleSendOTP = async () => {
     if (phone.length < 10) return setError("Please enter a valid 10-digit phone number.");
     setLoading(true);
     setError(null);
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      await API.post('/auth/send-otp', { phone });
       setOtpSent(true);
       alert("📲 DEMO OTP SENT! Please enter '1234' to login securely.");
-    }, 1000);
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to send OTP");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleLogin = async (e) => {
@@ -34,17 +40,19 @@ const Login = () => {
     setLoading(true);
     setError(null);
     
+    // 🚀 REAL OTP LOGIN
     if (loginMethod === 'otp') {
-      if (otp !== '1234') {
-        setError("Invalid OTP! Please enter 1234 for demo.");
+      const res = await otpLogin(phone, otp);
+      if (res.success) {
+        navigate('/search');
+      } else {
+        setError(res.message);
         setLoading(false);
-        return;
       }
-      demoOtpLogin(phone);
-      navigate('/search');
       return;
     }
 
+    // EMAIL LOGIN
     const res = await login(email, password);
     if (res.success) {
       const userData = JSON.parse(localStorage.getItem('userInfo'));
@@ -120,7 +128,6 @@ const Login = () => {
                   <label className="block text-slate-700 font-semibold mb-2">Password</label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none"><Lock className="w-5 h-5 text-slate-500" /></div>
-                    {/* 🚀 FIX: Eye Button Integrated correctly */}
                     <input type={showPassword ? "text" : "password"} required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Enter your password" className="w-full pl-12 pr-12 py-3.5 bg-slate-200 border border-slate-300 rounded-xl text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all text-lg placeholder-slate-500" />
                     <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-500 hover:text-slate-700 focus:outline-none">
                       {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
