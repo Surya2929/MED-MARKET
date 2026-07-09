@@ -20,9 +20,11 @@ const VendorDashboard = () => {
   // Custom Med State
   const [customMed, setCustomMed] = useState({ 
     name: '', composition: '', uses: '', price: '', stock: '', 
-    manufacturer: '', manufactureDate: '', expiryDate: '', image: null 
+    manufacturer: '', manufactureDate: '', expiryDate: '', imageUrl: null 
   });
   const [previewUrl, setPreviewUrl] = useState(null);
+  const [medImages, setMedImages] = useState({}); // 🚀 NEW: base64 images for master-dictionary rows { [medicineId]: base64 }
+  const [medImagePreviews, setMedImagePreviews] = useState({}); // 🚀 NEW: local preview URLs for the same
   const [loading, setLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
 
@@ -87,9 +89,22 @@ const VendorDashboard = () => {
     if (file) {
       if (file.size > 5 * 1024 * 1024) return alert("Image too large (Max 5MB)");
       const reader = new FileReader();
-      reader.onloadend = () => { setCustomMed({ ...customMed, image: reader.result }); setPreviewUrl(URL.createObjectURL(file)); };
+      reader.onloadend = () => { setCustomMed({ ...customMed, imageUrl: reader.result }); setPreviewUrl(URL.createObjectURL(file)); };
       reader.readAsDataURL(file);
     }
+  };
+
+  // 🚀 NEW: Image upload directly from the Master Dictionary table row
+  const handleDictImageUpload = (medId, e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) return alert("Image too large (Max 5MB)");
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setMedImages(prev => ({ ...prev, [medId]: reader.result }));
+      setMedImagePreviews(prev => ({ ...prev, [medId]: URL.createObjectURL(file) }));
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleBulkSave = async () => {
@@ -102,10 +117,17 @@ const VendorDashboard = () => {
         const newMedRes = await API.post('/medicines/master', customMed);
         await API.post('/vendor/inventory', { medicineId: newMedRes.data._id, price: customMed.price, stock: customMed.stock });
         setIsCustomMedicine(false); setPreviewUrl(null);
-        setCustomMed({ name: '', composition: '', uses: '', price: '', stock: '', manufacturer: '', manufactureDate: '', expiryDate: '', image: null });
+        setCustomMed({ name: '', composition: '', uses: '', price: '', stock: '', manufacturer: '', manufactureDate: '', expiryDate: '', imageUrl: null });
       } else {
         const payloadPromises = Object.entries(selectedMeds).filter(([_, d]) => d.selected && d.price && d.stock).map(([id, d]) => API.post('/vendor/inventory', { medicineId: id, price: d.price, stock: d.stock }));
-        await Promise.all(payloadPromises);
+        // 🚀 NEW: push uploaded images to the master medicine record (matched by name)
+        const imagePromises = Object.entries(medImages).map(([medId, imgData]) => {
+          const med = masterMedicines.find(m => m._id === medId);
+          if (!med) return null;
+          return API.post('/medicines/master', { name: med.name, imageUrl: imgData });
+        }).filter(Boolean);
+        await Promise.all([...payloadPromises, ...imagePromises]);
+        setMedImages({}); setMedImagePreviews({});
       }
       alert('Inventory Synced! 🎉');
       fetchDashboardData();
@@ -275,6 +297,7 @@ const VendorDashboard = () => {
                               <thead className="sticky top-0 bg-slate-100 z-10 border-b border-slate-200">
                                 <tr>
                                   <th className="p-3 w-10 text-center"><input type="checkbox" checked={isAllSelected} onChange={handleSelectAll} className="w-4 h-4 cursor-pointer" /></th>
+                                  <th className="p-3 w-16 font-semibold text-slate-600">Image</th>
                                   <th className="p-3 font-semibold text-slate-600">Medicine Name</th>
                                   <th className="p-3 font-semibold text-slate-600 w-32">Price (₹)</th>
                                   <th className="p-3 font-semibold text-slate-600 w-24">Stock</th>
@@ -286,6 +309,20 @@ const VendorDashboard = () => {
                                    return (
                                   <tr key={med._id} className={`${isSelected ? 'bg-blue-50/40' : 'hover:bg-slate-50'}`}>
                                     <td className="p-3 text-center"><input type="checkbox" checked={isSelected} onChange={()=>handleCheckboxChange(med._id)} className="w-4 h-4 cursor-pointer" /></td>
+                                    <td className="p-3">
+                                      {(medImagePreviews[med._id] || med.imageUrl) ? (
+                                        <label className="relative block w-10 h-10 rounded-md border border-slate-200 overflow-hidden cursor-pointer group">
+                                          <img src={medImagePreviews[med._id] || med.imageUrl} className="w-full h-full object-contain bg-white p-0.5" />
+                                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"><UploadCloud size={14} className="text-white"/></div>
+                                          <input type="file" onChange={(e) => handleDictImageUpload(med._id, e)} className="hidden" />
+                                        </label>
+                                      ) : (
+                                        <label className="w-10 h-10 rounded-md border border-dashed border-slate-300 flex items-center justify-center cursor-pointer bg-slate-50 hover:bg-slate-100 transition-colors" title="Upload Image">
+                                          <UploadCloud size={14} className="text-slate-400"/>
+                                          <input type="file" onChange={(e) => handleDictImageUpload(med._id, e)} className="hidden" />
+                                        </label>
+                                      )}
+                                    </td>
                                     <td className="p-3">
                                       <p className="font-bold text-slate-800">{med.name}</p>
                                       <p className="text-[10px] text-slate-500">{med.composition}</p>

@@ -6,6 +6,7 @@ const storeSchema = new mongoose.Schema({
   address: { type: String, required: true },
   licenseNumber: { type: String, required: true },
   isVerified: { type: Boolean, default: false }, // Future scope for admin verification
+  storeType: { type: String, enum: ['offline', 'online'], default: 'offline' },
 }, { timestamps: true });
 
 export default mongoose.model('Store', storeSchema);

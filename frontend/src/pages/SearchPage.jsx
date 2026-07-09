@@ -231,7 +231,7 @@ const SearchPage = () => {
 
   const handleAddToCart = (store, item, qty, packageLabel, finalPrice) => {
     if (!user) { alert("Please login first."); navigate('/login'); return; }
-    addToCart({ inventoryId: `${store.inventoryId}-${packageLabel}`, medicineId: item.medicineInfo._id, medicineName: `${item.medicineInfo.name} (${packageLabel})`, storeId: store.storeId, storeName: store.storeName, price: finalPrice }, qty);
+    addToCart({ inventoryId: `${store.inventoryId}-${packageLabel}`, medicineId: item.medicineInfo._id, medicineName: `${item.medicineInfo.name} (${packageLabel})`, storeId: store.storeId, storeName: store.storeName, price: finalPrice, stock: store.stock, imageUrl: item.medicineInfo.imageUrl }, qty);
   };
 
   const healthCategories = [
