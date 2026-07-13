@@ -2,15 +2,23 @@ import User from '../models/User.js';
 import Store from '../models/Store.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { OAuth2Client } from 'google-auth-library';
 
-const generateToken = (id) => { return jwt.sign({ id }, process.env.JWT_SECRET || 'MeraMahaSecretKey12345', { expiresIn: '30d' }); };
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+const generateToken = (id) => {
+  if (!process.env.JWT_SECRET) throw new Error('JWT_SECRET is not set in environment variables.');
+  return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' });
+};
 
 export const registerUser = async (req, res) => {
   try {
     // 🚀 NEW: Extracting storeType from req.body
     const { name, email, password, phone, role, storeName, address, licenseNumber, storeType } = req.body;
     const normalizedEmail = email.toLowerCase();
-    
+
+    if (!password || password.length < 6) return res.status(400).json({ message: 'Password must be at least 6 characters.' });
+
     const userExists = await User.findOne({ email: normalizedEmail });
     if (userExists) return res.status(400).json({ message: 'User already exists' });
 
@@ -53,19 +61,81 @@ export const sendOtp = async (req, res) => {
     if (!phone || phone.length !== 10) return res.status(400).json({ message: "Invalid phone" });
     const otp = Math.floor(1000 + Math.random() * 9000).toString();
     otpStore.set(phone, { otp, expiresAt: Date.now() + 5 * 60000 });
-    return res.status(200).json({ message: "Demo OTP sent! Use 1234" });
+    // 🚀 TODO (before real users go live): wire up a real SMS gateway (Twilio / MSG91 / etc).
+    // No SMS provider is configured yet, so the OTP is logged server-side for now.
+    console.log(`📲 OTP for ${phone}: ${otp}`);
+    return res.status(200).json({ message: "OTP sent successfully!" });
   } catch (error) { res.status(500).json({ message: "Failed" }); }
 };
 
 export const verifyOtp = async (req, res) => {
   try {
     const { phone, otp } = req.body;
-    if (otp !== '1234') return res.status(400).json({ message: "Invalid OTP! Use 1234." });
+    const record = otpStore.get(phone);
+    if (!record) return res.status(400).json({ message: "OTP not requested or already used. Please request a new one." });
+    if (Date.now() > record.expiresAt) { otpStore.delete(phone); return res.status(400).json({ message: "OTP expired. Please request a new one." }); }
+    if (record.otp !== otp) return res.status(400).json({ message: "Invalid OTP." });
+    otpStore.delete(phone); // 🚀 one-time use
+
     let user = await User.findOne({ phone });
     if (!user) {
-      user = await User.create({ name: `User_${phone.slice(6)}`, email: `${phone}@medmarket.in`, password: await bcrypt.hash('pwd', 10), phone: phone, role: 'customer' });
+      user = await User.create({ name: `User_${phone.slice(6)}`, email: `${phone}@medmarket.in`, password: await bcrypt.hash(Math.random().toString(36).slice(2), 10), phone: phone, role: 'customer' });
     }
     if (user.isBlocked) return res.status(403).json({ message: "Suspended." });
     res.status(200).json({ _id: user.id, name: user.name, email: user.email, role: user.role, token: generateToken(user._id) });
   } catch (error) { res.status(500).json({ message: error.message }); }
+};
+
+// 🚀 NEW: Forgot Password — reuses the same phone-OTP mechanism as OTP login
+export const resetPassword = async (req, res) => {
+  try {
+    const { phone, otp, newPassword } = req.body;
+    if (!newPassword || newPassword.length < 6) return res.status(400).json({ message: 'New password must be at least 6 characters.' });
+
+    const record = otpStore.get(phone);
+    if (!record) return res.status(400).json({ message: 'OTP not requested or already used. Please request a new one.' });
+    if (Date.now() > record.expiresAt) { otpStore.delete(phone); return res.status(400).json({ message: 'OTP expired. Please request a new one.' }); }
+    if (record.otp !== otp) return res.status(400).json({ message: 'Invalid OTP.' });
+    otpStore.delete(phone); // one-time use
+
+    const user = await User.findOne({ phone });
+    if (!user) return res.status(404).json({ message: 'No account found with this phone number.' });
+
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(newPassword, salt);
+    await user.save();
+
+    res.status(200).json({ message: 'Password reset successful! Please login with your new password.' });
+  } catch (error) { res.status(500).json({ message: error.message }); }
+};
+
+// 🚀 NEW: Google Sign-In — verifies the Google ID token and logs in / auto-registers the user
+export const googleLogin = async (req, res) => {
+  try {
+    const { credential } = req.body;
+    if (!credential) return res.status(400).json({ message: 'Missing Google credential.' });
+    if (!process.env.GOOGLE_CLIENT_ID) return res.status(500).json({ message: 'Google login is not configured on the server yet.' });
+
+    const ticket = await googleClient.verifyIdToken({ idToken: credential, audience: process.env.GOOGLE_CLIENT_ID });
+    const payload = ticket.getPayload();
+    const normalizedEmail = payload.email.toLowerCase();
+
+    let user = await User.findOne({ email: normalizedEmail });
+    if (!user) {
+      // 🚀 auto-register on first Google login. Phone is left blank — nudge the user to add it from their Profile page.
+      user = await User.create({
+        name: payload.name || normalizedEmail.split('@')[0],
+        email: normalizedEmail,
+        password: await bcrypt.hash(Math.random().toString(36).slice(2), 10), // unusable random password — this account only logs in via Google
+        phone: '0000000000',
+        role: 'customer'
+      });
+    }
+    if (user.isBlocked) return res.status(403).json({ message: 'Account suspended.' });
+
+    res.status(200).json({ _id: user.id, name: user.name, email: user.email, role: user.role, token: generateToken(user._id) });
+  } catch (error) {
+    console.error('Google login error:', error.message);
+    res.status(401).json({ message: 'Google authentication failed.' });
+  }
 };

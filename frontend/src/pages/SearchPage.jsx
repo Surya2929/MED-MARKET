@@ -1,11 +1,18 @@
 import { useState, useContext, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import API from '../services/api';
 import { CartContext } from '../context/CartContext';
 import { AuthContext } from '../context/AuthContext';
 import { LocationContext } from '../context/LocationContext';
 import { LanguageContext } from '../context/LanguageContext';
-import { Search, MapPin, ShieldCheck, ShoppingCart, Plus, Minus, Tag, Beaker, CheckCircle2, ChevronDown, ChevronUp, Bot, HeartPulse, Activity, Brain, Bone, Baby, LocateFixed, Lightbulb, Package, ArrowRight, StoreIcon, Truck, AlertTriangle } from 'lucide-react';
+import { Search, MapPin, ShieldCheck, ShoppingCart, Plus, Minus, Tag, Beaker, CheckCircle2, ChevronDown, ChevronUp, Bot, HeartPulse, Activity, Brain, Bone, Baby, LocateFixed, Lightbulb, Package, ArrowRight, StoreIcon, Truck, AlertTriangle, FileWarning } from 'lucide-react';
+
+// 🚀 NEW: shared stock-display helper — never reveal exact low counts to browsing customers
+const getStockLabel = (stock, t) => {
+  if (stock <= 0) return { text: t('outOfStockLabel'), color: 'text-rose-600' };
+  if (stock <= 5) return { text: t('fewLeft'), color: 'text-amber-600' };
+  return { text: t('inStockLabel'), color: 'text-emerald-600' };
+};
 
 const StoreRow = ({ store, item, isCheapest, onAdd, t, medType }) => {
   const [qty, setQty] = useState(1);
@@ -61,7 +68,7 @@ const StoreRow = ({ store, item, isCheapest, onAdd, t, medType }) => {
       <div className="w-full sm:w-auto flex items-center justify-between sm:justify-end gap-5">
         <div className="text-left sm:text-right">
           <span className="block text-xl font-black text-slate-900 tracking-tight">₹{currentPrice}</span>
-          <span className="text-[10px] text-slate-500 font-medium">{t('inStock')}: <span className="text-emerald-600 font-bold">{store.stock}</span></span>
+          <span className={`text-[10px] font-bold ${getStockLabel(store.stock, t).color}`}>{getStockLabel(store.stock, t).text}</span>
         </div>
         <div className="flex items-center gap-3">
           
@@ -89,7 +96,7 @@ const StoreRow = ({ store, item, isCheapest, onAdd, t, medType }) => {
   );
 };
 
-const MedicineCard = ({ item, isAlternative, onAddToCart, t, navigate }) => {
+const MedicineCard = ({ item, isAlternative, onAddToCart, t, navigate, translated }) => {
   const [activeTab, setActiveTab] = useState('local'); 
   const [showAllStores, setShowAllStores] = useState(false);
   
@@ -111,13 +118,21 @@ const MedicineCard = ({ item, isAlternative, onAddToCart, t, navigate }) => {
 
   // Dynamic Images
   let imageUrl = item.medicineInfo.imageUrl || "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?q=80&w=200&auto=format&fit=crop"; 
-  let typeLabel = "Tablets / Capsules";
+  let typeLabel = t('tabletsCapsules'); // 🚀 FIX: uses the static dictionary now, so it flips to Hindi automatically
 
   if (!item.medicineInfo.imageUrl) {
-    if (medType === 'liquid') { imageUrl = "https://plus.unsplash.com/premium_photo-1675715924046-24ba0da28ae8?q=80&w=200&auto=format&fit=crop"; typeLabel = "Liquid / Syrup / Drops"; } 
-    else if (medType === 'powder') { imageUrl = "https://images.unsplash.com/photo-1616671285444-2e92ed94e1d5?q=80&w=200&auto=format&fit=crop"; typeLabel = "Powder / Sachets"; } 
-    else if (medType === 'cream') { imageUrl = "https://images.unsplash.com/photo-1629198725805-4f36a56e01a0?q=80&w=200&auto=format&fit=crop"; typeLabel = "Cream / Ointment / Gel"; }
+    if (medType === 'liquid') { imageUrl = "https://plus.unsplash.com/premium_photo-1675715924046-24ba0da28ae8?q=80&w=200&auto=format&fit=crop"; typeLabel = t('liquidSyrup'); } 
+    else if (medType === 'powder') { imageUrl = "https://images.unsplash.com/photo-1616671285444-2e92ed94e1d5?q=80&w=200&auto=format&fit=crop"; typeLabel = t('powderSachets'); } 
+    else if (medType === 'cream') { imageUrl = "https://images.unsplash.com/photo-1629198725805-4f36a56e01a0?q=80&w=200&auto=format&fit=crop"; typeLabel = t('creamOintment'); }
+  } else {
+    if (medType === 'liquid') typeLabel = t('liquidSyrup');
+    else if (medType === 'powder') typeLabel = t('powderSachets');
+    else if (medType === 'cream') typeLabel = t('creamOintment');
   }
+
+  // 🚀 NEW: use AI-translated text when available (Hindi mode), otherwise fall back to original DB text
+  const displayName = translated?.name || item.medicineInfo.name;
+  const displayComposition = translated?.composition || item.medicineInfo.composition;
 
   return (
     <div className={`bg-white rounded-[1.5rem] border overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 ${isAlternative ? 'border-amber-200' : 'border-slate-200'}`}>
@@ -127,15 +142,23 @@ const MedicineCard = ({ item, isAlternative, onAddToCart, t, navigate }) => {
         </div>
       )}
       <div className="p-6 md:p-8 flex flex-col md:flex-row gap-8">
-        <div onClick={() => navigate('/medicine-details', { state: { item, imageUrl, typeLabel, medType } })} className="flex gap-6 md:w-5/12 cursor-pointer group">
+        <div onClick={() => navigate('/medicine-details', { state: { item, imageUrl, typeLabel, medType, translated } })} className="flex gap-6 md:w-5/12 cursor-pointer group">
           <div className="w-24 h-24 sm:w-28 sm:h-28 bg-white border border-slate-200 p-2 rounded-xl shrink-0 flex items-center justify-center overflow-hidden">
             <img src={imageUrl} alt={typeLabel} className="w-full h-full object-cover rounded-xl" />
           </div>
           <div>
-            <h2 className="text-2xl font-black text-slate-900 mb-1.5 tracking-tight group-hover:text-blue-600 transition-colors">{item.medicineInfo.name}</h2>
+            <h2 className="text-2xl font-black text-slate-900 mb-1.5 tracking-tight group-hover:text-blue-600 transition-colors">{displayName}</h2>
             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-3 bg-slate-100 w-fit px-2 py-1 rounded">{typeLabel}</p>
-            <div className="inline-block bg-blue-50 text-blue-700 px-3 py-1 rounded-md text-[11px] font-bold border border-blue-100 mb-3">{item.medicineInfo.composition}</div>
-            <p className="text-xs text-blue-600 font-bold flex items-center gap-1">View Full Details <ArrowRight className="w-3 h-3"/></p>
+            <div className="flex flex-wrap items-center gap-2 mb-3">
+              <div className="inline-block bg-blue-50 text-blue-700 px-3 py-1 rounded-md text-[11px] font-bold border border-blue-100">{displayComposition}</div>
+              {/* 🚀 NEW: Prescription Required badge */}
+              {item.medicineInfo.prescriptionRequired && (
+                <div className="inline-flex items-center gap-1 bg-rose-50 text-rose-700 px-3 py-1 rounded-md text-[11px] font-bold border border-rose-100">
+                  <FileWarning className="w-3 h-3"/> {t('rxRequired')}
+                </div>
+              )}
+            </div>
+            <p className="text-xs text-blue-600 font-bold flex items-center gap-1">{t('viewFullDetails')} <ArrowRight className="w-3 h-3"/></p>
           </div>
         </div>
 
@@ -169,6 +192,7 @@ const MedicineCard = ({ item, isAlternative, onAddToCart, t, navigate }) => {
 };
 
 const SearchPage = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -176,17 +200,19 @@ const SearchPage = () => {
   const [nearbyStores, setNearbyStores] = useState([]);
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+  const [translatedMap, setTranslatedMap] = useState({}); // 🚀 NEW: { [medicineId]: { name, composition, uses } } in Hindi
   
   const { addToCart } = useContext(CartContext);
   const { user } = useContext(AuthContext); 
   const { userLocation, setManualLocation, fetchCurrentLocation } = useContext(LocationContext) || {};
-  const { t } = useContext(LanguageContext); 
+  const { t, language } = useContext(LanguageContext); 
   const navigate = useNavigate(); 
   const [showLocPopup, setShowLocPopup] = useState(false);
   const [locInput, setLocInput] = useState('');
   const [locLoading, setLocLoading] = useState(false);
   const popupRef = useRef(null);
   const searchRef = useRef(null);
+  const debounceRef = useRef(null); // 🚀 NEW: debounce timer for suggestions
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -208,18 +234,61 @@ const SearchPage = () => {
     fetchStores();
   }, [userLocation]);
 
-  const handleInputChange = async (e) => {
-    const value = e.target.value; setQuery(value);
-    if (value.trim().length >= 2) {
+  // 🚀 FIX: restore the last search from the URL when this page is reached via browser/back-button
+  // navigation, instead of showing a blank "home" state (the actual bug behind "View Full Details -> Back").
+  useEffect(() => {
+    const urlQuery = searchParams.get('q');
+    if (urlQuery && !hasSearched) {
+      triggerSearch(urlQuery, false); // false = don't push a new URL entry, we're already on it
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 🚀 NEW: Hindi mode — translate medicine name/composition/uses for whatever is currently on screen
+  useEffect(() => {
+    const translateResults = async () => {
+      if (language !== 'Hindi') { setTranslatedMap({}); return; }
+      const allItems = [...(results.exactMatches || []), ...(results.alternatives || [])];
+      const untranslated = allItems.filter(i => !translatedMap[i.medicineInfo._id]);
+      if (untranslated.length === 0) return;
+
+      const texts = [];
+      untranslated.forEach(i => { texts.push(i.medicineInfo.name, i.medicineInfo.composition, i.medicineInfo.uses || ''); });
+
       try {
-        const { data } = await API.get(`/medicines/suggestions?q=${value}`);
-        setSuggestions(data); setShowSuggestions(true);
-      } catch (err) { setSuggestions([]); }
+        const { data } = await API.post('/medicines/translate', { texts });
+        const newMap = { ...translatedMap };
+        untranslated.forEach((i, idx) => {
+          newMap[i.medicineInfo._id] = {
+            name: data.translations[idx * 3] || i.medicineInfo.name,
+            composition: data.translations[idx * 3 + 1] || i.medicineInfo.composition,
+            uses: data.translations[idx * 3 + 2] || i.medicineInfo.uses
+          };
+        });
+        setTranslatedMap(newMap);
+      } catch (err) { /* silently fall back to English if translation fails */ }
+    };
+    translateResults();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [results, language]);
+
+  const handleInputChange = (e) => {
+    const value = e.target.value; setQuery(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (value.trim().length >= 2) {
+      // 🚀 FIX: wait 300ms after the user stops typing instead of firing an API call on every keystroke
+      debounceRef.current = setTimeout(async () => {
+        try {
+          const { data } = await API.get(`/medicines/suggestions?q=${value}`);
+          setSuggestions(data); setShowSuggestions(true);
+        } catch (err) { setSuggestions([]); }
+      }, 300);
     } else { setShowSuggestions(false); }
   };
 
-  const triggerSearch = async (searchTerm) => {
+  const triggerSearch = async (searchTerm, updateUrl = true) => {
     setQuery(searchTerm); setShowSuggestions(false); setLoading(true); setHasSearched(true);
+    if (updateUrl) setSearchParams({ q: searchTerm }); // 🚀 FIX: keep the query in the URL so Back restores this exact search
     try {
       const cityToSearch = userLocation?.searchTerm || userLocation?.city?.split(',').pop().trim() || 'All Cities';
       const { data } = await API.get(`/medicines/search?q=${searchTerm}&city=${cityToSearch}`);
@@ -231,7 +300,7 @@ const SearchPage = () => {
 
   const handleAddToCart = (store, item, qty, packageLabel, finalPrice) => {
     if (!user) { alert("Please login first."); navigate('/login'); return; }
-    addToCart({ inventoryId: `${store.inventoryId}-${packageLabel}`, medicineId: item.medicineInfo._id, medicineName: `${item.medicineInfo.name} (${packageLabel})`, storeId: store.storeId, storeName: store.storeName, price: finalPrice, stock: store.stock, imageUrl: item.medicineInfo.imageUrl }, qty);
+    addToCart({ inventoryId: `${store.inventoryId}-${packageLabel}`, medicineId: item.medicineInfo._id, medicineName: `${item.medicineInfo.name} (${packageLabel})`, storeId: store.storeId, storeName: store.storeName, price: finalPrice, stock: store.stock, imageUrl: item.medicineInfo.imageUrl, prescriptionRequired: !!item.medicineInfo.prescriptionRequired }, qty);
   };
 
   const healthCategories = [
@@ -352,19 +421,8 @@ const SearchPage = () => {
 
         <div className="mt-8">
           {results.exactMatches && results.exactMatches.map((item) => (
-            <MedicineCard key={item.medicineInfo._id} item={item} isAlternative={false} onAddToCart={handleAddToCart} t={t} navigate={navigate} />
+            <MedicineCard key={item.medicineInfo._id} item={item} isAlternative={false} onAddToCart={handleAddToCart} t={t} navigate={navigate} translated={translatedMap[item.medicineInfo._id]} />
           ))}
-
-          {results.alternatives && results.alternatives.length > 0 && (
-            <div className="mt-12 pt-8 border-t border-slate-200">
-              <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
-                <Lightbulb className="w-6 h-6 text-amber-500" /> {t('cheaperAlt')}
-              </h2>
-              {results.alternatives.map((item) => (
-                 <MedicineCard key={item.medicineInfo._id} item={item} isAlternative={true} onAddToCart={handleAddToCart} t={t} navigate={navigate} />
-              ))}
-            </div>
-          )}
         </div>
       </div>
     </div>

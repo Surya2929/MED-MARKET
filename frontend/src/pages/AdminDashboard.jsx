@@ -2,7 +2,8 @@ import { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import API from '../services/api';
-import { ShieldAlert, Users, Store, ShieldCheck, Ban, AlertTriangle, MapPin, FileText, Phone, Mail, Clock, Check, X, CheckCircle2, PackageOpen, Package, AlertOctagon } from 'lucide-react';
+import { ShieldAlert, Users, Store, ShieldCheck, Ban, AlertTriangle, MapPin, FileText, Phone, Mail, Clock, Check, X, CheckCircle2, PackageOpen, Package, AlertOctagon, MessageSquare, ArrowUpDown, RotateCcw } from 'lucide-react';
+import ComplaintChat from '../components/ComplaintChat';
 
 const AdminDashboard = () => {
   const { user } = useContext(AuthContext);
@@ -11,11 +12,17 @@ const AdminDashboard = () => {
   const [reportsList, setReportsList] = useState([]); 
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('vendors'); 
+  const [openReport, setOpenReport] = useState(null); // 🚀 report currently open in the chat modal
 
   const [inventoryModalOpen, setInventoryModalOpen] = useState(false);
+  const [modalStoreId, setModalStoreId] = useState(null);
   const [modalStoreName, setModalStoreName] = useState('');
   const [storeInventory, setStoreInventory] = useState([]);
   const [invLoading, setInvLoading] = useState(false);
+
+  // 🚀 NEW: Customers tab filter/sort state
+  const [customerSort, setCustomerSort] = useState('none'); // none | orders | returns
+  const [onlyWithReturns, setOnlyWithReturns] = useState(false);
 
   useEffect(() => {
     if (!user || user.role !== 'admin') {
@@ -30,7 +37,7 @@ const AdminDashboard = () => {
       const { data } = await API.get('/users/admin/all');
       setUsersList(data || []); 
       
-      const reportRes = await API.get('/users/admin/reports');
+      const reportRes = await API.get('/reports/admin/all');
       setReportsList(reportRes.data || []);
     } catch (err) {
       console.error("Failed to fetch admin data");
@@ -65,6 +72,7 @@ const AdminDashboard = () => {
 
   const handleViewInventory = async (storeId, storeName) => {
     setInventoryModalOpen(true);
+    setModalStoreId(storeId);
     setModalStoreName(storeName);
     setInvLoading(true);
     setStoreInventory([]);
@@ -78,9 +86,17 @@ const AdminDashboard = () => {
     }
   };
 
+  // 🚀 NEW: block/unblock one specific medicine listing (without touching the whole store)
+  const handleToggleInventoryBlock = async (inventoryId) => {
+    try {
+      await API.put(`/users/admin/inventory/${inventoryId}/block`);
+      handleViewInventory(modalStoreId, modalStoreName); // refresh the modal's list
+    } catch (e) { alert("Failed to update listing"); }
+  };
+
   const handleReportAction = async (reportId, status) => {
     try {
-      await API.put(`/users/admin/reports/${reportId}`, { status });
+      await API.put(`/reports/admin/${reportId}/status`, { status });
       fetchData();
     } catch(e) { alert("Failed to update report"); }
   };
@@ -92,6 +108,15 @@ const AdminDashboard = () => {
   const verifiedStores = vendors.filter(v => v?.store?.isVerified === true).length;
   const pendingStores = vendors.length - verifiedStores;
   const pendingReports = reportsList.filter(r => r.status === 'Pending').length;
+
+  // 🚀 NEW: filtered/sorted customer list for the Customers tab
+  const filteredCustomers = customers
+    .filter(c => !onlyWithReturns || (c.totalReturns || 0) > 0)
+    .sort((a, b) => {
+      if (customerSort === 'orders') return (b.totalOrders || 0) - (a.totalOrders || 0);
+      if (customerSort === 'returns') return (b.totalReturns || 0) - (a.totalReturns || 0);
+      return 0;
+    });
 
   return (
     <div className="bg-slate-50 min-h-screen pb-16 font-sans">
@@ -112,14 +137,27 @@ const AdminDashboard = () => {
               ) : (
                 <table className="w-full text-left text-sm text-slate-600">
                   <thead className="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider text-[10px] sticky top-0 border-b border-slate-200">
-                    <tr><th className="p-4">Medicine Info</th><th className="p-4 text-center">Listed Price</th><th className="p-4 text-center">Current Stock</th></tr>
+                    <tr><th className="p-4">Medicine Info</th><th className="p-4 text-center">Listed Price</th><th className="p-4 text-center">Current Stock</th><th className="p-4 text-right">Action</th></tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {storeInventory.map(item => (
-                      <tr key={item._id} className="hover:bg-slate-50 transition-colors">
-                        <td className="p-4"><p className="font-extrabold text-slate-900 text-sm mb-1">{item.medicineId?.name || 'Unknown'}</p><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{item.medicineId?.composition || 'No Salt Info'}</p></td>
+                      <tr key={item._id} className={`hover:bg-slate-50 transition-colors ${item.isBlocked ? 'bg-rose-50/40' : ''}`}>
+                        <td className="p-4">
+                          <p className="font-extrabold text-slate-900 text-sm mb-1 flex items-center gap-2">
+                            {item.medicineId?.name || 'Unknown'}
+                            {item.isBlocked && <span className="text-[9px] font-bold bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded uppercase">Blocked</span>}
+                          </p>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{item.medicineId?.composition || 'No Salt Info'}</p>
+                        </td>
                         <td className="p-4 text-center font-black text-slate-800 text-base">₹{item.price}</td>
                         <td className="p-4 text-center">{item.stock > 0 ? <span className="bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-md font-bold text-xs">{item.stock}</span> : <span className="bg-rose-100 text-rose-700 px-3 py-1.5 rounded-md font-bold text-xs">Out of Stock</span>}</td>
+                        <td className="p-4 text-right">
+                          {item.isBlocked ? (
+                            <button onClick={() => handleToggleInventoryBlock(item._id)} className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-md text-xs font-bold border border-emerald-200 transition-colors inline-flex items-center gap-1"><RotateCcw size={12}/> Unblock</button>
+                          ) : (
+                            <button onClick={() => handleToggleInventoryBlock(item._id)} className="bg-rose-50 hover:bg-rose-100 text-rose-600 px-3 py-1.5 rounded-md text-xs font-bold border border-rose-200 transition-colors inline-flex items-center gap-1"><Ban size={12}/> Block</button>
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -216,29 +254,61 @@ const AdminDashboard = () => {
 
         {/* 🚀 TAB 2: CUSTOMERS */}
         {activeTab === 'customers' && (
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden max-w-4xl">
-            <table className="w-full text-left text-sm text-slate-600">
-              <thead className="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider text-[10px] border-b border-slate-200">
-                <tr><th className="p-5">Customer Profile</th><th className="p-5">Contact Details</th><th className="p-5 text-right">Account Access</th></tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {customers.map(c => (
-                  <tr key={c._id} className="hover:bg-slate-50 transition-colors">
-                    <td className="p-5 font-bold text-slate-900 text-base flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-black text-sm border border-blue-200">{c?.name?.charAt(0) || '?'}</div>{c?.name || 'Unknown'}
-                    </td>
-                    <td className="p-5"><p className="font-bold text-slate-700 flex items-center gap-1.5"><Mail className="w-3.5 h-3.5 text-slate-400"/> {c?.email || 'N/A'}</p><p className="text-xs text-slate-500 mt-1 flex items-center gap-1.5"><Phone className="w-3.5 h-3.5 text-slate-400"/> {c?.phone || 'N/A'}</p></td>
-                    <td className="p-5 text-right">
-                      {c?.isBlocked ? (
-                        <button onClick={() => handleBlockToggle(c._id)} className="bg-emerald-100 hover:bg-emerald-200 text-emerald-700 px-4 py-2 rounded-lg text-xs font-bold transition inline-flex items-center gap-1.5 shadow-sm border border-emerald-200"><CheckCircle2 className="w-4 h-4"/> Unblock</button>
-                      ) : (
-                        <button onClick={() => handleBlockToggle(c._id)} className="bg-rose-50 hover:bg-rose-100 text-rose-600 px-4 py-2 rounded-lg text-xs font-bold transition inline-flex items-center gap-1.5 shadow-sm border border-rose-200"><Ban className="w-4 h-4"/> Suspend</button>
-                      )}
-                    </td>
+          <div className="max-w-4xl">
+            {/* 🚀 NEW: Filter/Sort toolbar */}
+            <div className="bg-white rounded-xl border border-slate-200 p-4 mb-4 flex flex-wrap items-center gap-4">
+              <div className="flex items-center gap-2">
+                <ArrowUpDown className="w-4 h-4 text-slate-400"/>
+                <label className="text-xs font-bold text-slate-600">Sort by:</label>
+                <select value={customerSort} onChange={e => setCustomerSort(e.target.value)} className="text-xs font-bold border border-slate-300 rounded-md px-2 py-1.5 outline-none focus:border-blue-500 bg-white">
+                  <option value="none">Default</option>
+                  <option value="orders">Most Orders Placed</option>
+                  <option value="returns">Most Returns</option>
+                </select>
+              </div>
+              <label className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer">
+                <input type="checkbox" checked={onlyWithReturns} onChange={e => setOnlyWithReturns(e.target.checked)} className="w-4 h-4 accent-rose-600 cursor-pointer" />
+                Only show customers with returns
+              </label>
+              <span className="text-xs text-slate-400 ml-auto">{filteredCustomers.length} of {customers.length} customers</span>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+              <table className="w-full text-left text-sm text-slate-600">
+                <thead className="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider text-[10px] border-b border-slate-200">
+                  <tr>
+                    <th className="p-5">Customer Profile</th>
+                    <th className="p-5">Contact Details</th>
+                    <th className="p-5 text-center">Orders Placed</th>
+                    <th className="p-5 text-center">Returns</th>
+                    <th className="p-5 text-right">Account Access</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filteredCustomers.length === 0 ? (
+                    <tr><td colSpan="5" className="text-center p-8 font-bold text-slate-400">No customers match this filter.</td></tr>
+                  ) : filteredCustomers.map(c => (
+                    <tr key={c._id} className="hover:bg-slate-50 transition-colors">
+                      <td className="p-5 font-bold text-slate-900 text-base flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-black text-sm border border-blue-200">{c?.name?.charAt(0) || '?'}</div>{c?.name || 'Unknown'}
+                      </td>
+                      <td className="p-5"><p className="font-bold text-slate-700 flex items-center gap-1.5"><Mail className="w-3.5 h-3.5 text-slate-400"/> {c?.email || 'N/A'}</p><p className="text-xs text-slate-500 mt-1 flex items-center gap-1.5"><Phone className="w-3.5 h-3.5 text-slate-400"/> {c?.phone || 'N/A'}</p></td>
+                      <td className="p-5 text-center"><span className="bg-blue-50 text-blue-700 px-2.5 py-1 rounded-md font-bold text-xs">{c.totalOrders || 0}</span></td>
+                      <td className="p-5 text-center">
+                        {c.totalReturns > 0 ? <span className="bg-amber-50 text-amber-700 px-2.5 py-1 rounded-md font-bold text-xs">{c.totalReturns}</span> : <span className="text-slate-300 text-xs">0</span>}
+                      </td>
+                      <td className="p-5 text-right">
+                        {c?.isBlocked ? (
+                          <button onClick={() => handleBlockToggle(c._id)} className="bg-emerald-100 hover:bg-emerald-200 text-emerald-700 px-4 py-2 rounded-lg text-xs font-bold transition inline-flex items-center gap-1.5 shadow-sm border border-emerald-200"><CheckCircle2 className="w-4 h-4"/> Unblock</button>
+                        ) : (
+                          <button onClick={() => handleBlockToggle(c._id)} className="bg-rose-50 hover:bg-rose-100 text-rose-600 px-4 py-2 rounded-lg text-xs font-bold transition inline-flex items-center gap-1.5 shadow-sm border border-rose-200"><Ban className="w-4 h-4"/> Suspend</button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 
@@ -266,14 +336,17 @@ const AdminDashboard = () => {
                         <p className="text-[10px] text-slate-400 mt-2 font-bold uppercase tracking-widest">Order ID: {r.orderId?._id?.slice(-6) || 'N/A'}</p>
                       </td>
                       <td className="p-5 text-right">
-                        {r.status === 'Pending' ? (
-                          <div className="flex flex-col items-end gap-2">
-                             <button onClick={() => handleBlockToggle(r.reportedStore ? r.reportedStore.vendorId : r.reportedUser?._id)} className="bg-rose-600 text-white px-3 py-1.5 rounded text-xs font-bold shadow-sm hover:bg-rose-700 transition-colors">Suspend Accused</button>
-                             <button onClick={() => handleReportAction(r._id, 'Resolved')} className="text-emerald-600 text-xs font-bold hover:underline transition-colors">Mark Resolved</button>
-                          </div>
-                        ) : (
-                          <span className="text-emerald-500 font-black text-xs uppercase bg-emerald-50 px-2 py-1 rounded border border-emerald-200">RESOLVED</span>
-                        )}
+                        <div className="flex flex-col items-end gap-2">
+                          <button onClick={() => setOpenReport(r)} className="text-slate-600 hover:text-slate-800 text-xs font-bold bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-md flex items-center gap-1.5 transition-colors"><MessageSquare size={12}/> View Chat</button>
+                          {r.status === 'Pending' ? (
+                            <>
+                              <button onClick={() => handleBlockToggle(r.reportedStore ? r.reportedStore.vendorId : r.reportedUser?._id)} className="bg-rose-600 text-white px-3 py-1.5 rounded text-xs font-bold shadow-sm hover:bg-rose-700 transition-colors">Suspend Accused</button>
+                              <button onClick={() => handleReportAction(r._id, 'Resolved')} className="text-emerald-600 text-xs font-bold hover:underline transition-colors">Mark Resolved</button>
+                            </>
+                          ) : (
+                            <span className="text-emerald-500 font-black text-xs uppercase bg-emerald-50 px-2 py-1 rounded border border-emerald-200">RESOLVED</span>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -283,6 +356,15 @@ const AdminDashboard = () => {
         )}
 
       </div>
+
+      {/* 🚀 COMPLAINT CHAT MODAL (Admin can view & reply to any thread) */}
+      {openReport && (
+        <ComplaintChat
+          reportId={openReport._id}
+          otherPartyLabel={openReport.reportedBy?.name}
+          onClose={() => { setOpenReport(null); fetchData(); }}
+        />
+      )}
     </div>
   );
 };

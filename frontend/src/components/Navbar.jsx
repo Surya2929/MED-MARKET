@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { CartContext } from '../context/CartContext';
 import { LanguageContext } from '../context/LanguageContext';
-import { Pill, Search, Stethoscope, LogOut, Store, ShoppingCart, User, Languages, ShieldAlert, Package } from 'lucide-react'; // 🚀 Added 'Package' icon
+import { Pill, Search, Stethoscope, LogOut, Store, ShoppingCart, User, Languages, ShieldAlert, Package, MessageSquare } from 'lucide-react'; // 🚀 Added 'Package' icon
 
 const Navbar = () => {
   const { user, logout } = useContext(AuthContext);
@@ -43,6 +43,13 @@ const Navbar = () => {
                 <Link to="/myorders" className="flex items-center gap-1.5 text-slate-700 hover:text-emerald-600 transition-colors bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
                    <Package className="w-4 h-4 text-emerald-500" />
                    <span className="font-bold">My Orders</span>
+                </Link>
+              )}
+
+              {/* 🚀 NEW: MY COMPLAINTS LINK FOR CUSTOMERS & VENDORS */}
+              {(user.role === 'customer' || user.role === 'vendor') && (
+                <Link to="/complaints" className="flex items-center gap-1.5 text-slate-600 hover:text-rose-600 transition-colors" title="My Complaints">
+                   <MessageSquare className="w-4 h-4" />
                 </Link>
               )}
               

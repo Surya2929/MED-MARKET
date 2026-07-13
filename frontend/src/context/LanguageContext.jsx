@@ -24,7 +24,10 @@ export const LanguageProvider = ({ children }) => {
       shopByConcern: "Shop by Health Concerns", diabetes: "Diabetes Care", heart: "Heart Care", mental: "Mental Wellness",
       bone: "Bone & Joint", baby: "Baby Care", vitamins: "Vitamins & Supps", 
       viewDetails: "View Details", close: "Close", sideEffects: "Side Effects", dosage: "Dosage", warnings: "Warnings & Precautions",
-      manufacturer: "Manufacturer"
+      manufacturer: "Manufacturer",
+      fewLeft: "Only few left!", outOfStockLabel: "Out of Stock", inStockLabel: "In Stock",
+      rxRequired: "Prescription Required", viewFullDetails: "View Full Details",
+      tabletsCapsules: "Tablets / Capsules", liquidSyrup: "Liquid / Syrup / Drops", powderSachets: "Powder / Sachets", creamOintment: "Cream / Ointment / Gel"
     },
     Hindi: {
       searchMeds: "दवाइयां", aiConsult: "AI डॉक्टर", cart: "कार्ट", login: "लॉग इन", signup: "खाता बनाएं",
@@ -38,7 +41,10 @@ export const LanguageProvider = ({ children }) => {
       shopByConcern: "बीमारी के अनुसार खोजें", diabetes: "डायबिटीज", heart: "हार्ट केयर", mental: "मानसिक स्वास्थ्य",
       bone: "हड्डियां और जोड़", baby: "बेबी केयर", vitamins: "विटामिन्स", 
       viewDetails: "दवा की जानकारी", close: "बंद करें", sideEffects: "दुष्प्रभाव (Side Effects)", dosage: "खुराक (Dosage)", warnings: "सावधानियां (किसे नहीं खानी चाहिए)",
-      manufacturer: "निर्माता (Manufacturer)"
+      manufacturer: "निर्माता (Manufacturer)",
+      fewLeft: "बहुत कम स्टॉक बचा है!", outOfStockLabel: "स्टॉक खत्म", inStockLabel: "स्टॉक में उपलब्ध",
+      rxRequired: "पर्ची (Prescription) जरूरी है", viewFullDetails: "पूरी जानकारी देखें",
+      tabletsCapsules: "टैबलेट / कैप्सूल", liquidSyrup: "लिक्विड / सिरप / ड्रॉप्स", powderSachets: "पाउडर / साशे", creamOintment: "क्रीम / ऑइंटमेंट / जेल"
     }
   };
 

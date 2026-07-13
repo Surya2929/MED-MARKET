@@ -13,7 +13,9 @@ const medicineSchema = new mongoose.Schema({
   expiryDate: { type: Date },
   
   imageUrl: { type: String, default: null },
-  defaultPrice: { type: Number, default: 50 }
+  defaultPrice: { type: Number, default: 50 },
+  // 🚀 NEW: Vendor decides at listing-time whether this medicine needs a prescription to buy
+  prescriptionRequired: { type: Boolean, default: false }
 }, { timestamps: true });
 
 export default mongoose.model('Medicine', medicineSchema);

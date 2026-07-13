@@ -1,13 +1,15 @@
 import { useState, useEffect, useContext } from 'react';
 import API from '../services/api';
 import { AuthContext } from '../context/AuthContext';
-import { Package, Clock, CheckCircle2, StoreIcon, MapPin, Pill, AlertCircle, ShoppingBag, Truck, XCircle, RotateCcw } from 'lucide-react';
+import { Package, Clock, CheckCircle2, StoreIcon, MapPin, Pill, AlertCircle, ShoppingBag, Truck, XCircle, RotateCcw, MessageSquare } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import ComplaintChat from '../components/ComplaintChat';
 
 const MyOrders = () => {
   const { user } = useContext(AuthContext);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [complaintOrder, setComplaintOrder] = useState(null); // 🚀 order currently open in the complaint chat modal
 
   const fetchOrders = async () => {
     try {
@@ -70,7 +72,7 @@ const MyOrders = () => {
                       <h4 className="text-xs font-black text-slate-400 uppercase mb-2">Pharmacy Info</h4>
                       <p className="font-bold text-slate-800 text-sm flex items-center gap-2"><StoreIcon className="w-4 h-4 text-blue-600" /> {order.storeId?.storeName}</p>
                     </div>
-                    {/* 🚀 CANCEL / RETURN BUTTONS */}
+                    {/* 🚀 CANCEL / RETURN / REPORT BUTTONS */}
                     <div className="flex gap-2">
                       {(order.status === 'Pending' || order.status === 'Accepted') && (
                         <button onClick={() => handleOrderStatusUpdate(order._id, 'Cancelled')} className="text-xs font-bold text-rose-500 hover:text-rose-700 bg-rose-50 px-3 py-1.5 rounded-md border border-rose-100 transition">Cancel Order</button>
@@ -78,6 +80,7 @@ const MyOrders = () => {
                       {order.status === 'Delivered' && (
                         <button onClick={() => handleOrderStatusUpdate(order._id, 'Return Requested')} className="text-xs font-bold text-purple-600 hover:text-purple-800 bg-purple-50 px-3 py-1.5 rounded-md border border-purple-100 transition">Return Item</button>
                       )}
+                      <button onClick={() => setComplaintOrder(order)} className="text-xs font-bold text-slate-600 hover:text-slate-800 bg-slate-100 px-3 py-1.5 rounded-md border border-slate-200 transition flex items-center gap-1"><MessageSquare size={12}/> Report Issue</button>
                     </div>
                   </div>
 
@@ -94,6 +97,15 @@ const MyOrders = () => {
           </div>
         )}
       </div>
+
+      {/* 🚀 COMPLAINT CHAT MODAL */}
+      {complaintOrder && (
+        <ComplaintChat
+          orderId={complaintOrder._id}
+          otherPartyLabel={complaintOrder.storeId?.storeName}
+          onClose={() => setComplaintOrder(null)}
+        />
+      )}
     </div>
   );
 };

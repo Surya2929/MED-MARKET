@@ -36,6 +36,38 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // 🚀 NEW: Google Sign-In — credential is the ID token from Google's Identity Services popup
+  const googleLogin = async (credential) => {
+    try {
+      const { data } = await API.post('/auth/google', { credential });
+      setUser(data);
+      localStorage.setItem('userInfo', JSON.stringify(data));
+      return { success: true };
+    } catch (error) {
+      return { success: false, message: error.response?.data?.message || 'Google login failed' };
+    }
+  };
+
+  // 🚀 NEW: Forgot Password flow — step 1: send OTP to the phone on file
+  const sendResetOtp = async (phone) => {
+    try {
+      await API.post('/auth/send-otp', { phone });
+      return { success: true };
+    } catch (error) {
+      return { success: false, message: error.response?.data?.message || 'Failed to send OTP' };
+    }
+  };
+
+  // 🚀 NEW: Forgot Password flow — step 2: verify OTP + set new password
+  const resetPassword = async (phone, otp, newPassword) => {
+    try {
+      const { data } = await API.post('/auth/reset-password', { phone, otp, newPassword });
+      return { success: true, message: data.message };
+    } catch (error) {
+      return { success: false, message: error.response?.data?.message || 'Failed to reset password' };
+    }
+  };
+
   const logout = () => {
     setUser(null);
     localStorage.removeItem('userInfo');
@@ -44,7 +76,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, otpLogin, logout }}>
+    <AuthContext.Provider value={{ user, login, otpLogin, googleLogin, sendResetOtp, resetPassword, logout }}>
       {children}
     </AuthContext.Provider>
   );

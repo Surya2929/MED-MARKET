@@ -1,7 +1,7 @@
 import User from '../models/User.js';
 import Store from '../models/Store.js';
 import Inventory from '../models/Inventory.js';
-import Report from '../models/Report.js';
+import Order from '../models/Order.js'; // 🚀 NEW: needed for customer order/return stats
 import bcrypt from 'bcryptjs';
 
 // ==========================================
@@ -55,11 +55,19 @@ export const getAllUsers = async (req, res) => {
   try {
     const users = await User.find({ role: { $ne: 'admin' } }).select('-password');
     const stores = await Store.find();
+    const orders = await Order.find().select('customerId status'); // 🚀 NEW: for customer stats
     
     const combinedData = users.map(user => {
       let userData = { ...user._doc };
       if(user.role === 'vendor') {
         userData.store = stores.find(s => s.vendorId.toString() === user._id.toString());
+      }
+      // 🚀 NEW: attach order-count / return-count so Admin can filter/sort customers by activity
+      if (user.role === 'customer') {
+        const myOrders = orders.filter(o => o.customerId.toString() === user._id.toString());
+        userData.totalOrders = myOrders.length;
+        userData.totalReturns = myOrders.filter(o => o.status === 'Return Requested').length;
+        userData.totalCancelled = myOrders.filter(o => o.status === 'Cancelled').length;
       }
       return userData;
     });
@@ -115,55 +123,14 @@ export const getStoreInventoryForAdmin = async (req, res) => {
   }
 };
 
-// ==========================================
-// 3. REPORTS & COMPLAINTS CONTROLLERS
-// ==========================================
-export const createReport = async (req, res) => {
+// 🚀 NEW: Admin can hide one specific medicine listing (e.g. suspected fake stock) without touching the whole store
+export const toggleBlockInventory = async (req, res) => {
   try {
-    const { reportedUserId, reportedStoreId, orderId, reason, description } = req.body;
-    
-    if (!reason || !description) return res.status(400).json({ message: "Reason and Description are required" });
-
-    const report = await Report.create({
-      reportedBy: req.user._id,
-      reportedUser: reportedUserId || null,
-      reportedStore: reportedStoreId || null,
-      orderId: orderId || null,
-      reason,
-      description
-    });
-
-    res.status(201).json({ message: "Report submitted successfully!", report });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-export const getAllReports = async (req, res) => {
-  try {
-    const reports = await Report.find()
-      .populate('reportedBy', 'name role email phone')
-      .populate('reportedUser', 'name role email phone isBlocked')
-      .populate('reportedStore', 'storeName address')
-      .populate('orderId', '_id totalAmount status')
-      .sort({ createdAt: -1 });
-
-    res.status(200).json(reports);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-export const updateReportStatus = async (req, res) => {
-  try {
-    const { status } = req.body;
-    const report = await Report.findById(req.params.id);
-    if (!report) return res.status(404).json({ message: "Report not found" });
-
-    report.status = status;
-    await report.save();
-
-    res.status(200).json({ message: `Report marked as ${status}`, report });
+    const inv = await Inventory.findById(req.params.id);
+    if (!inv) return res.status(404).json({ message: 'Listing not found' });
+    inv.isBlocked = !inv.isBlocked;
+    await inv.save();
+    res.status(200).json({ message: inv.isBlocked ? 'Medicine listing blocked' : 'Medicine listing unblocked', inventory: inv });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

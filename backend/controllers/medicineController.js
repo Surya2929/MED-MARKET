@@ -8,7 +8,7 @@ export const addMasterMedicine = async (req, res) => {
   try {
     const { 
       name, composition, uses, sideEffects, dosage, imageUrl, defaultPrice,
-      manufacturer, manufactureDate, expiryDate 
+      manufacturer, manufactureDate, expiryDate, prescriptionRequired 
     } = req.body;
     
     if (!name) return res.status(400).json({ message: 'Medicine name is required' });
@@ -22,6 +22,7 @@ export const addMasterMedicine = async (req, res) => {
       medicine.expiryDate = expiryDate || medicine.expiryDate;
       medicine.imageUrl = imageUrl || medicine.imageUrl;
       medicine.uses = uses || medicine.uses;
+      if (typeof prescriptionRequired === 'boolean') medicine.prescriptionRequired = prescriptionRequired;
       await medicine.save();
       return res.status(200).json(medicine); 
     }
@@ -36,7 +37,8 @@ export const addMasterMedicine = async (req, res) => {
       defaultPrice: defaultPrice || 50,
       manufacturer: manufacturer || "Generic / Unspecified",
       manufactureDate: manufactureDate || null,
-      expiryDate: expiryDate || null
+      expiryDate: expiryDate || null,
+      prescriptionRequired: !!prescriptionRequired
     });
     res.status(201).json(medicine);
   } catch (error) {
@@ -159,7 +161,7 @@ export const searchAndCompare = async (req, res) => {
 
     let inventoryResults = await Inventory.find({ medicineId: { $in: allMedicineIds } })
       .populate('medicineId')
-      .populate('storeId', 'storeName address isVerified storeType');
+      .populate({ path: 'storeId', select: 'storeName address isVerified storeType vendorId', populate: { path: 'vendorId', select: 'isBlocked' } });
 
     if (city && city !== 'All Cities' && city !== 'Select Location') {
        let cityKeyword = city.split(',').pop().trim().toLowerCase().replace('district', '').trim();
@@ -175,7 +177,10 @@ export const searchAndCompare = async (req, res) => {
     const formatResults = (medicinesList) => {
       return medicinesList.map(med => {
         const availableStores = inventoryResults.filter(
-          inv => inv.medicineId && inv.medicineId._id.toString() === med._id.toString() && inv.stock > 0 && inv.storeId?.isVerified === true
+          inv => inv.medicineId && inv.medicineId._id.toString() === med._id.toString() && inv.stock > 0 
+            && inv.storeId?.isVerified === true
+            && !inv.isBlocked // 🚀 NEW: admin-blocked listing hidden from customers
+            && !inv.storeId?.vendorId?.isBlocked // 🚀 FIX: a suspended vendor's medicines no longer show up
         );
 
         return {
@@ -228,5 +233,39 @@ export const getSuggestions = async (req, res) => {
     res.status(200).json(suggestions);
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+// 🚀 NEW: Translate a batch of medicine text fields (name/composition/uses etc.) to Hindi via Groq
+export const translateTexts = async (req, res) => {
+  try {
+    const { texts } = req.body;
+    if (!Array.isArray(texts) || texts.length === 0) return res.status(400).json({ message: 'texts array is required' });
+    if (texts.length > 100) return res.status(400).json({ message: 'Too many texts in one request (max 100).' });
+    if (!process.env.GROQ_API_KEY) return res.status(200).json({ translations: texts }); // graceful fallback: return originals
+
+    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+    const prompt = `Translate each of the following medical/pharmacy related phrases into simple, natural Hindi (Devanagari script). Keep medicine brand names in Roman script if there's no common Hindi equivalent, but translate generic descriptive text fully.
+Return ONLY a raw JSON array of strings, in the exact same order as input, same length as input. No markdown, no explanation.
+
+Input: ${JSON.stringify(texts)}`;
+
+    const chatCompletion = await groq.chat.completions.create({
+      messages: [{ role: 'system', content: prompt }],
+      model: 'llama-3.1-8b-instant',
+      temperature: 0.1,
+    });
+
+    let aiResponse = chatCompletion.choices[0]?.message?.content || "";
+    const jsonMatch = aiResponse.match(/\[[\s\S]*\]/);
+    if (!jsonMatch) return res.status(200).json({ translations: texts }); // fallback to originals
+
+    let translations = JSON.parse(jsonMatch[0]);
+    if (!Array.isArray(translations) || translations.length !== texts.length) return res.status(200).json({ translations: texts });
+
+    res.status(200).json({ translations });
+  } catch (error) {
+    console.error('Translation error:', error.message);
+    res.status(200).json({ translations: req.body.texts || [] }); // never hard-fail the page over a translation error
   }
 };

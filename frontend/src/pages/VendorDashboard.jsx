@@ -2,7 +2,8 @@ import { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import API from '../services/api';
-import { Store, Package, ShoppingBag, PlusSquare, UploadCloud, X, LayoutDashboard, Database, PieChart, CheckSquare, Trash2, Edit3, Droplets, User, Phone, MapPin, CheckCircle2, AlertTriangle, Clock } from 'lucide-react';
+import { Store, Package, ShoppingBag, PlusSquare, UploadCloud, X, LayoutDashboard, Database, PieChart, CheckSquare, Trash2, Edit3, Droplets, User, Phone, MapPin, CheckCircle2, AlertTriangle, Clock, MessageSquare } from 'lucide-react';
+import ComplaintChat from '../components/ComplaintChat';
 
 const VendorDashboard = () => {
   const { user } = useContext(AuthContext);
@@ -20,13 +21,14 @@ const VendorDashboard = () => {
   // Custom Med State
   const [customMed, setCustomMed] = useState({ 
     name: '', composition: '', uses: '', price: '', stock: '', 
-    manufacturer: '', manufactureDate: '', expiryDate: '', imageUrl: null 
+    manufacturer: '', manufactureDate: '', expiryDate: '', imageUrl: null, prescriptionRequired: false 
   });
   const [previewUrl, setPreviewUrl] = useState(null);
   const [medImages, setMedImages] = useState({}); // 🚀 NEW: base64 images for master-dictionary rows { [medicineId]: base64 }
   const [medImagePreviews, setMedImagePreviews] = useState({}); // 🚀 NEW: local preview URLs for the same
   const [loading, setLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
+  const [complaintOrder, setComplaintOrder] = useState(null); // 🚀 order currently open in the complaint chat modal
 
   const checkLiquidType = (name, composition, dosage) => {
     const combined = `${name} ${composition} ${dosage}`.toLowerCase();
@@ -117,7 +119,7 @@ const VendorDashboard = () => {
         const newMedRes = await API.post('/medicines/master', customMed);
         await API.post('/vendor/inventory', { medicineId: newMedRes.data._id, price: customMed.price, stock: customMed.stock });
         setIsCustomMedicine(false); setPreviewUrl(null);
-        setCustomMed({ name: '', composition: '', uses: '', price: '', stock: '', manufacturer: '', manufactureDate: '', expiryDate: '', imageUrl: null });
+        setCustomMed({ name: '', composition: '', uses: '', price: '', stock: '', manufacturer: '', manufactureDate: '', expiryDate: '', imageUrl: null, prescriptionRequired: false });
       } else {
         const payloadPromises = Object.entries(selectedMeds).filter(([_, d]) => d.selected && d.price && d.stock).map(([id, d]) => API.post('/vendor/inventory', { medicineId: id, price: d.price, stock: d.stock }));
         // 🚀 NEW: push uploaded images to the master medicine record (matched by name)
@@ -278,6 +280,12 @@ const VendorDashboard = () => {
                                 <label className="text-[10px] font-bold text-slate-500 mb-1 block">Usage / Indications</label>
                                 <textarea value={customMed.uses} onChange={e=>setCustomMed({...customMed, uses: e.target.value})} className="w-full p-2 text-sm border border-slate-200 rounded-md outline-none focus:border-blue-500 resize-none" rows="2" placeholder="What is this used for?" />
                               </div>
+                              <div className="md:col-span-3">
+                                <label className="flex items-center gap-2 bg-rose-50 border border-rose-100 rounded-md px-3 py-2.5 cursor-pointer w-fit">
+                                  <input type="checkbox" checked={customMed.prescriptionRequired} onChange={e => setCustomMed({...customMed, prescriptionRequired: e.target.checked})} className="w-4 h-4 accent-rose-600 cursor-pointer" />
+                                  <span className="text-xs font-bold text-rose-700">Prescription Required to buy this medicine?</span>
+                                </label>
+                              </div>
                             </div>
                           </div>
                           <button onClick={handleBulkSave} disabled={loading} className="w-full bg-slate-800 hover:bg-slate-900 text-white py-3 rounded-lg font-bold text-sm transition-colors">
@@ -399,6 +407,7 @@ const VendorDashboard = () => {
                              <div className="flex items-center gap-3 mb-4">
                                <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded">ID: #{order._id.slice(-6)}</span>
                                <span className={`text-[10px] font-bold uppercase px-2 py-1 rounded border ${order.status === 'Pending' ? 'bg-amber-50 text-amber-600 border-amber-200' : 'bg-blue-50 text-blue-600 border-blue-200'}`}>{order.status}</span>
+                               <button onClick={() => setComplaintOrder(order)} className="ml-auto text-[10px] font-bold text-slate-500 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-md flex items-center gap-1 transition-colors"><MessageSquare size={11}/> Report Customer</button>
                              </div>
                              <h4 className="text-lg font-bold text-slate-800 flex items-center gap-2"><User size={16} className="text-slate-400"/> {order.customerId?.name}</h4>
                              <p className="text-xs text-slate-500 mt-1 flex items-center gap-3"><span className="flex items-center gap-1"><Phone size={12}/> {order.customerId?.phone}</span> <span className="flex items-center gap-1"><MapPin size={12}/> {order.deliveryAddress}</span></p>
@@ -434,6 +443,13 @@ const VendorDashboard = () => {
           </div>
         </div>
       </div>
+      {complaintOrder && (
+        <ComplaintChat
+          orderId={complaintOrder._id}
+          otherPartyLabel={complaintOrder.customerId?.name}
+          onClose={() => setComplaintOrder(null)}
+        />
+      )}
     </div>
   );
 };

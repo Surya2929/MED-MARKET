@@ -3,7 +3,13 @@ import { CartContext } from '../context/CartContext';
 import { AuthContext } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import API from '../services/api';
-import { ChevronLeft, Trash2, ShoppingBag, ArrowRight, Home, UploadCloud, X, Receipt } from 'lucide-react';
+import { ChevronLeft, Trash2, ShoppingBag, ArrowRight, Home, UploadCloud, X, Receipt, FileWarning, AlertCircle } from 'lucide-react';
+
+// 🚀 NEW: same address rule enforced on the backend — min length + a 6-digit Indian PIN code
+const isValidAddress = (address) => {
+  if (!address || address.trim().length < 15) return false;
+  return /\b\d{6}\b/.test(address);
+};
 
 const CartPage = () => {
   const { cart, removeFromCart, clearCart, updateQuantity } = useContext(CartContext);
@@ -12,11 +18,16 @@ const CartPage = () => {
   const [step, setStep] = useState('cart'); // 🚀 'cart' -> items list | 'checkout' -> address + prescription
   const [loading, setLoading] = useState(false);
   const [address, setAddress] = useState('');
+  const [addressTouched, setAddressTouched] = useState(false);
   const [prescription, setPrescription] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
 
   const itemTotal = cart.reduce((acc, i) => acc + (i.price * i.quantity), 0);
   const deliveryFee = itemTotal > 500 ? 0 : 40;
+
+  // 🚀 NEW: if ANY item in the cart requires a prescription, uploading one becomes mandatory
+  const needsPrescription = cart.some(i => i.prescriptionRequired);
+  const addressValid = isValidAddress(address);
 
   const handleImage = (e) => {
     const file = e.target.files[0];
@@ -30,20 +41,22 @@ const CartPage = () => {
 
   const handleCheckout = async () => {
     if (!user) return navigate('/login');
-    if (!address) return alert("Delivery Address is required.");
+    setAddressTouched(true);
+    if (!addressValid) return alert("Please enter a complete delivery address including a valid 6-digit PIN code.");
+    if (needsPrescription && !prescription) return alert("One or more items in your cart require a prescription. Please upload a photo to continue.");
+
     setLoading(true);
     try {
       await API.post('/orders', {
         storeId: cart[0].storeId,
         items: cart,
-        totalAmount: itemTotal + deliveryFee,
         deliveryAddress: address,
         prescriptionImage: prescription
       });
       alert("Order Placed Successfully!");
       clearCart();
       navigate('/myorders');
-    } catch (e) { alert("Failed to place order."); } finally { setLoading(false); }
+    } catch (e) { alert(e.response?.data?.message || "Failed to place order."); } finally { setLoading(false); }
   };
 
   if (!cart.length) return (
@@ -81,7 +94,10 @@ const CartPage = () => {
                        {item.imageUrl ? <img src={item.imageUrl} className="object-contain p-1" /> : <ShoppingBag className="text-slate-300" size={20}/>}
                     </div>
                     <div>
-                      <h4 className="font-bold text-slate-800">{item.medicineName}</h4>
+                      <h4 className="font-bold text-slate-800 flex items-center gap-2">
+                        {item.medicineName}
+                        {item.prescriptionRequired && <span className="flex items-center gap-1 text-[9px] font-bold text-rose-600 bg-rose-50 border border-rose-100 px-1.5 py-0.5 rounded uppercase"><FileWarning size={9}/> Rx</span>}
+                      </h4>
                       <p className="text-xs text-slate-500">Sold by: {item.storeName}</p>
                       <p className="text-sm font-bold text-slate-900 mt-1">₹{item.price}</p>
                     </div>
@@ -102,12 +118,18 @@ const CartPage = () => {
 
                     <div className="text-right">
                       <p className="text-lg font-bold text-slate-900 w-16">₹{item.price * item.quantity}</p>
-                      <p className="text-[10px] text-slate-400">Max: {item.stock}</p>
                     </div>
                     <button onClick={() => removeFromCart(item.inventoryId)} className="text-rose-500 hover:text-rose-600 p-2"><Trash2 size={20}/></button>
                   </div>
                 </div>
               ))}
+
+              {needsPrescription && (
+                <div className="bg-rose-50 border border-rose-200 rounded-xl p-4 flex gap-3">
+                  <FileWarning className="text-rose-500 shrink-0" size={20}/>
+                  <p className="text-xs font-bold text-rose-800 leading-relaxed">One or more medicines in your cart require a valid prescription. You'll need to upload a photo of it at checkout.</p>
+                </div>
+              )}
             </div>
           )}
 
@@ -115,9 +137,11 @@ const CartPage = () => {
           {step === 'checkout' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                <h3 className="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2"><UploadCloud size={18} className="text-blue-500"/> Prescription (Optional)</h3>
+                <h3 className={`text-sm font-bold mb-4 flex items-center gap-2 ${needsPrescription ? 'text-rose-700' : 'text-slate-700'}`}>
+                  <UploadCloud size={18} className={needsPrescription ? 'text-rose-500' : 'text-blue-500'}/> Prescription {needsPrescription ? '(Required)' : '(Optional)'}
+                </h3>
                 {!previewUrl ? (
-                  <label className="border-2 border-dashed border-slate-300 rounded-lg h-24 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-50 transition">
+                  <label className={`border-2 border-dashed rounded-lg h-24 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-50 transition ${needsPrescription ? 'border-rose-300' : 'border-slate-300'}`}>
                     <span className="text-xs font-semibold text-slate-500">Click to upload photo</span>
                     <input type="file" onChange={handleImage} className="hidden" />
                   </label>
@@ -131,7 +155,17 @@ const CartPage = () => {
 
               <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
                 <h3 className="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2"><Home size={18} className="text-blue-500"/> Delivery Address</h3>
-                <textarea value={address} onChange={e=>setAddress(e.target.value)} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-blue-500 text-sm" rows="3" placeholder="Enter complete address..." />
+                <textarea
+                  value={address}
+                  onChange={e=>setAddress(e.target.value)}
+                  onBlur={() => setAddressTouched(true)}
+                  className={`w-full p-3 bg-slate-50 border rounded-lg outline-none text-sm ${addressTouched && !addressValid ? 'border-rose-400 focus:border-rose-500' : 'border-slate-200 focus:border-blue-500'}`}
+                  rows="3"
+                  placeholder="House no, street, area, city, state — including 6-digit PIN code"
+                />
+                {addressTouched && !addressValid && (
+                  <p className="text-[11px] text-rose-600 font-semibold mt-1.5 flex items-center gap-1"><AlertCircle size={12}/> Enter a complete address with a valid 6-digit PIN code.</p>
+                )}
               </div>
             </div>
           )}
@@ -152,7 +186,7 @@ const CartPage = () => {
                 Proceed to Checkout <ArrowRight size={18}/>
               </button>
             ) : (
-              <button onClick={handleCheckout} disabled={loading || !address} className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-lg font-bold transition flex justify-center items-center gap-2 disabled:bg-slate-400">
+              <button onClick={handleCheckout} disabled={loading} className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-lg font-bold transition flex justify-center items-center gap-2 disabled:bg-slate-400">
                 {loading ? 'Processing...' : 'Place Order'} <ArrowRight size={18}/>
               </button>
             )}

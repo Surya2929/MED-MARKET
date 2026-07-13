@@ -1,30 +1,62 @@
 import Order from '../models/Order.js';
 import Store from '../models/Store.js'; 
 import Inventory from '../models/Inventory.js'; // 🚀 Added to update stock
+import Medicine from '../models/Medicine.js'; // 🚀 NEW: needed to check prescriptionRequired
+
+// 🚀 NEW: basic sanity check so people can't place an order with a junk/incomplete address —
+// requires a reasonable length AND a 6-digit Indian PIN code somewhere in the text.
+const isValidAddress = (address) => {
+  if (!address || address.trim().length < 15) return false;
+  return /\b\d{6}\b/.test(address); // has a 6-digit PIN code
+};
 
 export const placeOrder = async (req, res) => {
   try {
-    const { storeId, items, totalAmount, deliveryAddress, prescriptionImage } = req.body;
+    const { storeId, items, deliveryAddress, prescriptionImage } = req.body;
 
     if (!items || items.length === 0) return res.status(400).json({ message: 'No order items' });
     if (!storeId) return res.status(400).json({ message: 'Store ID is missing.' });
-    if (!deliveryAddress) return res.status(400).json({ message: 'Delivery address is required.' });
+    if (!isValidAddress(deliveryAddress)) return res.status(400).json({ message: 'Please enter a complete delivery address including a valid 6-digit PIN code.' });
+
+    // 🚀 SECURITY FIX: never trust price/stock sent by the client — re-verify everything
+    // against the live Inventory record so the bill can't be tampered with, and so we
+    // never oversell stock that's run out since the customer added it to their cart.
+    const verifiedItems = [];
+    let requiresPrescription = false;
+    for (const item of items) {
+      const inv = await Inventory.findOne({ storeId, medicineId: item.medicineId });
+      if (!inv) return res.status(400).json({ message: 'One of the items is no longer available at this store.' });
+      if (inv.stock < item.quantity) return res.status(400).json({ message: `Only a few units are left in stock for one of your items. Please update your cart.` });
+      verifiedItems.push({ medicineId: item.medicineId, quantity: item.quantity, price: inv.price });
+
+      const med = await Medicine.findById(item.medicineId).select('prescriptionRequired');
+      if (med?.prescriptionRequired) requiresPrescription = true;
+    }
+
+    // 🚀 NEW: enforce prescription upload server-side (not just a frontend nicety)
+    if (requiresPrescription && !prescriptionImage) {
+      return res.status(400).json({ message: 'A prescription photo is required to order one or more items in your cart.' });
+    }
+
+    const itemTotal = verifiedItems.reduce((sum, i) => sum + (i.price * i.quantity), 0);
+    const deliveryFee = itemTotal > 500 ? 0 : 40;
+    const totalAmount = itemTotal + deliveryFee;
 
     const order = await Order.create({
       customerId: req.user._id,
-      storeId: storeId, 
+      storeId,
       deliveryAddress,
-      prescriptionImage: prescriptionImage || null, 
-      items: items.map(item => ({ medicineId: item.medicineId, quantity: item.quantity, price: item.price })),
+      prescriptionImage: prescriptionImage || null,
+      items: verifiedItems,
       totalAmount,
       status: 'Pending'
     });
 
-    // 🚀 NEW: MINUS STOCK IN REAL TIME
-    for (const item of items) {
+    // Stock is deducted only after every item passed the checks above
+    for (const item of verifiedItems) {
       await Inventory.findOneAndUpdate(
-        { storeId: storeId, medicineId: item.medicineId },
-        { $inc: { stock: -item.quantity } } 
+        { storeId, medicineId: item.medicineId },
+        { $inc: { stock: -item.quantity } }
       );
     }
 

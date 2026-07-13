@@ -17,6 +17,8 @@ import ProfilePage from './pages/ProfilePage';
 import AdminDashboard from './pages/AdminDashboard'; 
 import MedicineDetails from './pages/MedicineDetails'; 
 import MyOrders from './pages/MyOrders'; // 🚀 NAYA IMPORT
+import MyComplaints from './pages/MyComplaints';
+import NotFound from './pages/NotFound';
 
 const ProtectedRoute = ({ children }) => {
   const { user } = useContext(AuthContext);
@@ -45,8 +47,10 @@ function App() {
                     <Route path="/chat" element={<ProtectedRoute><ChatbotPage /></ProtectedRoute>} />
                     <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} /> 
                     <Route path="/myorders" element={<ProtectedRoute><MyOrders /></ProtectedRoute>} /> {/* 🚀 NAYA ROUTE */}
+                    <Route path="/complaints" element={<ProtectedRoute><MyComplaints /></ProtectedRoute>} />
                     <Route path="/vendor-dashboard" element={<ProtectedRoute><VendorDashboard /></ProtectedRoute>} />
                     <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
+                    <Route path="*" element={<NotFound />} />
                   </Routes>
                 </main>
                 <Footer />

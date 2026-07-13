@@ -6,9 +6,7 @@ const router = express.Router();
 
 router.post('/', protect, placeOrder);
 router.get('/myorders', protect, getMyOrders);
-
-// 🚀 NEW: VENDOR ROUTES
 router.get('/vendor', protect, vendorOnly, getVendorOrders);
-router.put('/:id/status', protect, vendorOnly, updateOrderStatus);
+router.put('/:id/status', protect, updateOrderStatus);
 
 export default router;
