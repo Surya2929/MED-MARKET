@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import API from '../services/api';
+import { LanguageContext } from '../context/LanguageContext';
 import { MessageSquare, AlertCircle, ShieldAlert, Store, User, Clock, CheckCircle2, XCircle } from 'lucide-react';
 import ComplaintChat from '../components/ComplaintChat';
 
 const MyComplaints = () => {
+  const { t } = useContext(LanguageContext);
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [openReport, setOpenReport] = useState(null);
@@ -29,14 +31,14 @@ const MyComplaints = () => {
 
   return (
     <div className="bg-slate-50 min-h-screen pb-16 font-sans">
-      <div className="bg-slate-900 py-10"><div className="max-w-4xl mx-auto px-4"><h1 className="text-3xl font-black text-white flex items-center gap-3"><ShieldAlert className="w-8 h-8 text-rose-400" /> My Complaints</h1></div></div>
+      <div className="bg-slate-900 py-10"><div className="max-w-4xl mx-auto px-4"><h1 className="text-3xl font-black text-white flex items-center gap-3"><ShieldAlert className="w-8 h-8 text-rose-400" /> {t('myComplaintsTitle')}</h1></div></div>
 
       <div className="max-w-4xl mx-auto px-4 py-8">
         {reports.length === 0 ? (
           <div className="bg-white p-12 rounded-[2rem] shadow-sm text-center">
             <MessageSquare className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-            <h2 className="text-2xl font-black text-slate-800 mb-2">No complaints yet</h2>
-            <p className="text-slate-500 text-sm">Complaints you file, or that are filed against you, will show up here.</p>
+            <h2 className="text-2xl font-black text-slate-800 mb-2">{t('noComplaints')}</h2>
+            <p className="text-slate-500 text-sm">{t('noComplaintsDesc')}</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -51,10 +53,10 @@ const MyComplaints = () => {
                     </div>
                     <p className="text-sm text-slate-600 truncate">{r.description}</p>
                     <p className="text-[11px] text-slate-400 mt-2 flex items-center gap-1.5">
-                      {r.reportedStore ? <><Store size={11}/> Against store: {r.reportedStore.storeName}</> : <><User size={11}/> Against: {r.reportedUser?.name}</>}
+                      {r.reportedStore ? <><Store size={11}/> {t('againstStore')}: {r.reportedStore.storeName}</> : <><User size={11}/> {t('against')}: {r.reportedUser?.name}</>}
                     </p>
                   </div>
-                  <div className="shrink-0 text-blue-600 text-xs font-bold flex items-center gap-1"><MessageSquare size={14}/> Open Chat</div>
+                  <div className="shrink-0 text-blue-600 text-xs font-bold flex items-center gap-1"><MessageSquare size={14}/> {t('openChat')}</div>
                 </button>
               );
             })}

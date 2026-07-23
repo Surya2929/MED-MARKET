@@ -1,11 +1,11 @@
 import { useContext, useState } from 'react';
 import { CartContext } from '../context/CartContext';
 import { AuthContext } from '../context/AuthContext';
+import { LanguageContext } from '../context/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import API from '../services/api';
-import { ChevronLeft, Trash2, ShoppingBag, ArrowRight, Home, UploadCloud, X, Receipt, FileWarning, AlertCircle } from 'lucide-react';
+import { ChevronLeft, Trash2, ShoppingBag, ArrowRight, Home, UploadCloud, X, Receipt, FileWarning, AlertCircle, Truck, CreditCard } from 'lucide-react';
 
-// 🚀 NEW: same address rule enforced on the backend — min length + a 6-digit Indian PIN code
 const isValidAddress = (address) => {
   if (!address || address.trim().length < 15) return false;
   return /\b\d{6}\b/.test(address);
@@ -14,18 +14,20 @@ const isValidAddress = (address) => {
 const CartPage = () => {
   const { cart, removeFromCart, clearCart, updateQuantity } = useContext(CartContext);
   const { user } = useContext(AuthContext);
+  const { t } = useContext(LanguageContext);
   const navigate = useNavigate();
-  const [step, setStep] = useState('cart'); // 🚀 'cart' -> items list | 'checkout' -> address + prescription
+  const [step, setStep] = useState('cart');
   const [loading, setLoading] = useState(false);
   const [address, setAddress] = useState('');
   const [addressTouched, setAddressTouched] = useState(false);
   const [prescription, setPrescription] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
+  const [paymentMethod, setPaymentMethod] = useState('cod');
 
   const itemTotal = cart.reduce((acc, i) => acc + (i.price * i.quantity), 0);
   const deliveryFee = itemTotal > 500 ? 0 : 40;
+  const totalAmount = itemTotal + deliveryFee;
 
-  // 🚀 NEW: if ANY item in the cart requires a prescription, uploading one becomes mandatory
   const needsPrescription = cart.some(i => i.prescriptionRequired);
   const addressValid = isValidAddress(address);
 
@@ -39,12 +41,14 @@ const CartPage = () => {
     }
   };
 
-  const handleCheckout = async () => {
-    if (!user) return navigate('/login');
+  const validateBeforeCheckout = () => {
     setAddressTouched(true);
-    if (!addressValid) return alert("Please enter a complete delivery address including a valid 6-digit PIN code.");
-    if (needsPrescription && !prescription) return alert("One or more items in your cart require a prescription. Please upload a photo to continue.");
+    if (!addressValid) { alert(t('addressValidationAlert')); return false; }
+    if (needsPrescription && !prescription) { alert(t('prescriptionValidationAlert')); return false; }
+    return true;
+  };
 
+  const handleCodCheckout = async () => {
     setLoading(true);
     try {
       await API.post('/orders', {
@@ -53,38 +57,92 @@ const CartPage = () => {
         deliveryAddress: address,
         prescriptionImage: prescription
       });
-      alert("Order Placed Successfully!");
+      alert(t('orderPlacedSuccess'));
       clearCart();
       navigate('/myorders');
-    } catch (e) { alert(e.response?.data?.message || "Failed to place order."); } finally { setLoading(false); }
+    } catch (e) { alert(e.response?.data?.message || t('orderPlaceFail')); } finally { setLoading(false); }
+  };
+
+  const handleOnlineCheckout = async () => {
+    if (!window.Razorpay) return alert(t('paymentNotConfigured'));
+    setLoading(true);
+    try {
+      const { data } = await API.post('/payments/create-order', {
+        storeId: cart[0].storeId,
+        items: cart,
+        deliveryAddress: address,
+        prescriptionImage: prescription
+      });
+
+      const options = {
+        key: data.keyId,
+        amount: data.amount,
+        currency: data.currency,
+        name: 'MedMarket',
+        description: 'Medicine Order Payment',
+        order_id: data.razorpayOrderId,
+        prefill: { name: user?.name, email: user?.email },
+        theme: { color: '#2563eb' },
+        handler: async (response) => {
+          try {
+            await API.post('/payments/verify', {
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature
+            });
+            alert(t('orderPlacedSuccess'));
+            clearCart();
+            navigate('/myorders');
+          } catch (err) {
+            alert(err.response?.data?.message || t('paymentVerifyFailed'));
+          } finally {
+            setLoading(false);
+          }
+        },
+        modal: {
+          ondismiss: () => setLoading(false)
+        }
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.on('payment.failed', () => { alert(t('paymentFailed')); setLoading(false); });
+      rzp.open();
+    } catch (e) {
+      alert(e.response?.data?.message || t('orderPlaceFail'));
+      setLoading(false);
+    }
+  };
+
+  const handleCheckout = () => {
+    if (!user) return navigate('/login');
+    if (!validateBeforeCheckout()) return;
+    if (paymentMethod === 'online') handleOnlineCheckout();
+    else handleCodCheckout();
   };
 
   if (!cart.length) return (
     <div className="h-screen bg-slate-50 flex flex-col items-center justify-center">
       <ShoppingBag size={64} className="text-slate-300 mb-4"/>
-      <h2 className="text-xl font-bold text-slate-700">Your cart is empty</h2>
-      <button onClick={() => navigate(-1)} className="mt-4 bg-blue-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-blue-700 transition">Go Back</button>
+      <h2 className="text-xl font-bold text-slate-700">{t('cartEmpty')}</h2>
+      <button onClick={() => navigate(-1)} className="mt-4 bg-blue-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-blue-700 transition">{t('goBack')}</button>
     </div>
   );
 
   return (
     <div className="bg-slate-50 min-h-screen pb-20 font-sans">
 
-      {/* 🚀 PROPER BACK NAVIGATION BAR */}
       <div className="bg-white border-b border-slate-200 sticky top-0 z-50 px-4 py-3 flex items-center justify-between shadow-sm">
         <button onClick={() => step === 'checkout' ? setStep('cart') : navigate(-1)} className="flex items-center gap-1 text-slate-600 hover:text-blue-600 font-semibold transition-colors">
-          <ChevronLeft size={20}/> {step === 'checkout' ? 'Back to Cart' : 'Continue Shopping'}
+          <ChevronLeft size={20}/> {step === 'checkout' ? t('backToCart') : t('continueShopping')}
         </button>
-        <span className="text-sm font-bold text-slate-800">{step === 'cart' ? `Your Cart (${cart.length})` : 'Checkout'}</span>
-        <div className="w-20"></div> {/* Spacer for center alignment */}
+        <span className="text-sm font-bold text-slate-800">{step === 'cart' ? `${t('yourCart')} (${cart.length})` : t('checkout')}</span>
+        <div className="w-20"></div>
       </div>
 
       <div className="max-w-6xl mx-auto px-4 mt-8 flex flex-col lg:flex-row gap-8">
 
-        {/* LEFT: STEP CONTENT */}
         <div className="flex-1 space-y-6">
 
-          {/* 🚀 STEP 1: CART ITEMS ONLY */}
           {step === 'cart' && (
             <div className="space-y-4">
               {cart.map((item) => (
@@ -98,13 +156,12 @@ const CartPage = () => {
                         {item.medicineName}
                         {item.prescriptionRequired && <span className="flex items-center gap-1 text-[9px] font-bold text-rose-600 bg-rose-50 border border-rose-100 px-1.5 py-0.5 rounded uppercase"><FileWarning size={9}/> Rx</span>}
                       </h4>
-                      <p className="text-xs text-slate-500">Sold by: {item.storeName}</p>
+                      <p className="text-xs text-slate-500">{t('soldBy')}: {item.storeName}</p>
                       <p className="text-sm font-bold text-slate-900 mt-1">₹{item.price}</p>
                     </div>
                   </div>
 
                   <div className="flex items-center justify-between w-full md:w-auto gap-6">
-                    {/* 🚀 MANUAL QUANTITY CONTROL */}
                     <div className="flex items-center bg-white border border-slate-300 rounded-lg p-1">
                       <button onClick={() => updateQuantity(item.inventoryId, item.quantity - 1, item.stock)} className="px-3 py-1 bg-slate-100 text-slate-600 rounded hover:bg-slate-200 transition font-bold">-</button>
                       <input
@@ -127,67 +184,83 @@ const CartPage = () => {
               {needsPrescription && (
                 <div className="bg-rose-50 border border-rose-200 rounded-xl p-4 flex gap-3">
                   <FileWarning className="text-rose-500 shrink-0" size={20}/>
-                  <p className="text-xs font-bold text-rose-800 leading-relaxed">One or more medicines in your cart require a valid prescription. You'll need to upload a photo of it at checkout.</p>
+                  <p className="text-xs font-bold text-rose-800 leading-relaxed">{t('prescriptionWarning')}</p>
                 </div>
               )}
             </div>
           )}
 
-          {/* 🚀 STEP 2: ADDRESS + PRESCRIPTION (only shown at checkout time) */}
           {step === 'checkout' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                <h3 className={`text-sm font-bold mb-4 flex items-center gap-2 ${needsPrescription ? 'text-rose-700' : 'text-slate-700'}`}>
-                  <UploadCloud size={18} className={needsPrescription ? 'text-rose-500' : 'text-blue-500'}/> Prescription {needsPrescription ? '(Required)' : '(Optional)'}
-                </h3>
-                {!previewUrl ? (
-                  <label className={`border-2 border-dashed rounded-lg h-24 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-50 transition ${needsPrescription ? 'border-rose-300' : 'border-slate-300'}`}>
-                    <span className="text-xs font-semibold text-slate-500">Click to upload photo</span>
-                    <input type="file" onChange={handleImage} className="hidden" />
-                  </label>
-                ) : (
-                  <div className="relative h-24 rounded-lg overflow-hidden border border-slate-200">
-                    <img src={previewUrl} className="w-full h-full object-cover" />
-                    <button onClick={() => {setPreviewUrl(null); setPrescription(null);}} className="absolute top-1 right-1 bg-rose-500 text-white p-1 rounded"><X size={12}/></button>
-                  </div>
-                )}
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                  <h3 className={`text-sm font-bold mb-4 flex items-center gap-2 ${needsPrescription ? 'text-rose-700' : 'text-slate-700'}`}>
+                    <UploadCloud size={18} className={needsPrescription ? 'text-rose-500' : 'text-blue-500'}/> {needsPrescription ? t('prescriptionRequiredLabel') : t('prescriptionOptional')}
+                  </h3>
+                  {!previewUrl ? (
+                    <label className={`border-2 border-dashed rounded-lg h-24 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-50 transition ${needsPrescription ? 'border-rose-300' : 'border-slate-300'}`}>
+                      <span className="text-xs font-semibold text-slate-500">{t('clickToUpload')}</span>
+                      <input type="file" onChange={handleImage} className="hidden" />
+                    </label>
+                  ) : (
+                    <div className="relative h-24 rounded-lg overflow-hidden border border-slate-200">
+                      <img src={previewUrl} className="w-full h-full object-cover" />
+                      <button onClick={() => {setPreviewUrl(null); setPrescription(null);}} className="absolute top-1 right-1 bg-rose-500 text-white p-1 rounded"><X size={12}/></button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                  <h3 className="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2"><Home size={18} className="text-blue-500"/> {t('deliveryAddress')}</h3>
+                  <textarea
+                    value={address}
+                    onChange={e=>setAddress(e.target.value)}
+                    onBlur={() => setAddressTouched(true)}
+                    className={`w-full p-3 bg-slate-50 border rounded-lg outline-none text-sm ${addressTouched && !addressValid ? 'border-rose-400 focus:border-rose-500' : 'border-slate-200 focus:border-blue-500'}`}
+                    rows="3"
+                    placeholder={t('addressPlaceholder')}
+                  />
+                  {addressTouched && !addressValid && (
+                    <p className="text-[11px] text-rose-600 font-semibold mt-1.5 flex items-center gap-1"><AlertCircle size={12}/> {t('addressError')}</p>
+                  )}
+                </div>
               </div>
 
               <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                <h3 className="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2"><Home size={18} className="text-blue-500"/> Delivery Address</h3>
-                <textarea
-                  value={address}
-                  onChange={e=>setAddress(e.target.value)}
-                  onBlur={() => setAddressTouched(true)}
-                  className={`w-full p-3 bg-slate-50 border rounded-lg outline-none text-sm ${addressTouched && !addressValid ? 'border-rose-400 focus:border-rose-500' : 'border-slate-200 focus:border-blue-500'}`}
-                  rows="3"
-                  placeholder="House no, street, area, city, state — including 6-digit PIN code"
-                />
-                {addressTouched && !addressValid && (
-                  <p className="text-[11px] text-rose-600 font-semibold mt-1.5 flex items-center gap-1"><AlertCircle size={12}/> Enter a complete address with a valid 6-digit PIN code.</p>
-                )}
+                <h3 className="text-sm font-bold text-slate-700 mb-4">{t('paymentMethod')}</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <label className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all ${paymentMethod === 'cod' ? 'border-blue-500 bg-blue-50/50 shadow-sm' : 'border-slate-200 hover:border-slate-300'}`}>
+                    <input type="radio" name="paymentMethod" value="cod" checked={paymentMethod === 'cod'} onChange={() => setPaymentMethod('cod')} className="w-4 h-4 accent-blue-600" />
+                    <Truck size={20} className={paymentMethod === 'cod' ? 'text-blue-600' : 'text-slate-400'} />
+                    <span className="font-bold text-sm text-slate-800">{t('cashOnDelivery')}</span>
+                  </label>
+                  <label className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all ${paymentMethod === 'online' ? 'border-blue-500 bg-blue-50/50 shadow-sm' : 'border-slate-200 hover:border-slate-300'}`}>
+                    <input type="radio" name="paymentMethod" value="online" checked={paymentMethod === 'online'} onChange={() => setPaymentMethod('online')} className="w-4 h-4 accent-blue-600" />
+                    <CreditCard size={20} className={paymentMethod === 'online' ? 'text-blue-600' : 'text-slate-400'} />
+                    <span className="font-bold text-sm text-slate-800">{t('payOnline')}</span>
+                  </label>
+                </div>
               </div>
             </div>
           )}
         </div>
 
-        {/* RIGHT: BILL SUMMARY (visible on both steps) */}
         <div className="w-full lg:w-80">
           <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-lg sticky top-20">
-            <h3 className="text-lg font-bold text-slate-800 border-b pb-3 mb-4 flex items-center gap-2"><Receipt size={20}/> Bill Details</h3>
+            <h3 className="text-lg font-bold text-slate-800 border-b pb-3 mb-4 flex items-center gap-2"><Receipt size={20}/> {t('billDetails')}</h3>
             <div className="space-y-3 text-sm font-medium text-slate-600 mb-6">
-              <div className="flex justify-between"><span>Item Total</span><span>₹{itemTotal}</span></div>
-              <div className="flex justify-between"><span>Delivery Fee</span><span className="text-emerald-600 font-bold">{deliveryFee === 0 ? 'FREE' : `₹${deliveryFee}`}</span></div>
-              <div className="flex justify-between border-t border-slate-100 pt-3 text-lg font-black text-slate-900"><span>To Pay</span><span>₹{itemTotal + deliveryFee}</span></div>
+              <div className="flex justify-between"><span>{t('itemTotal')}</span><span>₹{itemTotal}</span></div>
+              <div className="flex justify-between"><span>{t('deliveryFee')}</span><span className="text-emerald-600 font-bold">{deliveryFee === 0 ? t('free') : `₹${deliveryFee}`}</span></div>
+              <div className="flex justify-between border-t border-slate-100 pt-3 text-lg font-black text-slate-900"><span>{t('toPay')}</span><span>₹{totalAmount}</span></div>
             </div>
 
             {step === 'cart' ? (
               <button onClick={() => setStep('checkout')} className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-lg font-bold transition flex justify-center items-center gap-2">
-                Proceed to Checkout <ArrowRight size={18}/>
+                {t('proceedToCheckout')} <ArrowRight size={18}/>
               </button>
             ) : (
               <button onClick={handleCheckout} disabled={loading} className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-lg font-bold transition flex justify-center items-center gap-2 disabled:bg-slate-400">
-                {loading ? 'Processing...' : 'Place Order'} <ArrowRight size={18}/>
+                {loading ? t('processing') : t('placeOrder')} <ArrowRight size={18}/>
               </button>
             )}
           </div>

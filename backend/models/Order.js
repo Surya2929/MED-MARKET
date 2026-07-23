@@ -19,7 +19,12 @@ const orderSchema = new mongoose.Schema({
     enum: ['Pending', 'Accepted', 'Packed', 'Out for Delivery', 'Delivered', 'Cancelled', 'Return Requested', 'Returned'], 
     default: 'Pending' 
   },
-  cancelReason: { type: String } // Agar cancel/return kiya toh kyun?
+  cancelReason: { type: String }, // Agar cancel/return kiya toh kyun?
+  // 🚀 NEW: Payment tracking
+  paymentMethod: { type: String, enum: ['COD', 'Online'], default: 'COD' },
+  paymentStatus: { type: String, enum: ['Pending', 'Paid', 'Failed'], default: 'Pending' },
+  razorpayOrderId: { type: String },
+  razorpayPaymentId: { type: String }
 }, { timestamps: true });
 
 export default mongoose.model('Order', orderSchema);

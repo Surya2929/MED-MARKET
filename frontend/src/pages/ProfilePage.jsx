@@ -1,10 +1,12 @@
 import { useState, useEffect, useContext } from 'react';
 import API from '../services/api';
 import { AuthContext } from '../context/AuthContext';
+import { LanguageContext } from '../context/LanguageContext';
 import { User, Phone, Lock, Store, MapPin, ShieldCheck, CheckCircle2 } from 'lucide-react';
 
 const ProfilePage = () => {
   const { user } = useContext(AuthContext);
+  const { t } = useContext(LanguageContext);
   
   const [formData, setFormData] = useState({ name: '', phone: '', password: '' });
   const [storeData, setStoreData] = useState({ storeName: '', address: '', licenseNumber: '' });
@@ -53,7 +55,7 @@ const ProfilePage = () => {
     }
   };
 
-  if (loading) return <div className="text-center py-20 animate-pulse text-slate-500 font-bold">Loading Profile...</div>;
+  if (loading) return <div className="text-center py-20 animate-pulse text-slate-500 font-bold">{t('loadingProfile')}</div>;
 
   return (
     <div className="bg-slate-50 min-h-[90vh] py-12 px-4">
@@ -76,17 +78,17 @@ const ProfilePage = () => {
             {error && <div className="bg-rose-50 text-rose-700 border border-rose-200 p-4 rounded-xl font-bold flex items-center gap-2"><ShieldCheck className="w-5 h-5"/> {error}</div>}
 
             <div>
-              <h3 className="text-lg font-black text-slate-800 border-b border-slate-200 pb-2 mb-6">Personal Details</h3>
+              <h3 className="text-lg font-black text-slate-800 border-b border-slate-200 pb-2 mb-6">{t('personalDetails')}</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">Full Name</label>
+                  <label className="block text-sm font-bold text-slate-700 mb-2">{t('fullNameLabel')}</label>
                   <div className="relative">
                     <User className="absolute left-4 top-3.5 w-5 h-5 text-slate-400" />
                     <input type="text" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500 text-slate-800 font-medium" />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">Phone Number</label>
+                  <label className="block text-sm font-bold text-slate-700 mb-2">{t('phoneNumber')}</label>
                   <div className="relative">
                     <Phone className="absolute left-4 top-3.5 w-5 h-5 text-slate-400" />
                     <input type="text" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value.replace(/\D/g, '').slice(0, 10)})} className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500 text-slate-800 font-medium" />
@@ -97,30 +99,30 @@ const ProfilePage = () => {
 
             {user?.role === 'vendor' && (
               <div>
-                <h3 className="text-lg font-black text-slate-800 border-b border-slate-200 pb-2 mb-6 flex items-center gap-2"><Store className="w-5 h-5 text-teal-600"/> Pharmacy Details</h3>
+                <h3 className="text-lg font-black text-slate-800 border-b border-slate-200 pb-2 mb-6 flex items-center gap-2"><Store className="w-5 h-5 text-teal-600"/> {t('pharmacyDetails')}</h3>
                 <div className="space-y-4">
-                  <input type="text" value={storeData.storeName} onChange={(e) => setStoreData({...storeData, storeName: e.target.value})} placeholder="Store Name" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-teal-500 text-slate-800 font-medium" />
+                  <input type="text" value={storeData.storeName} onChange={(e) => setStoreData({...storeData, storeName: e.target.value})} placeholder={t('storeName')} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-teal-500 text-slate-800 font-medium" />
                   <div className="relative">
                     <MapPin className="absolute left-4 top-3.5 w-5 h-5 text-slate-400" />
-                    <input type="text" value={storeData.address} onChange={(e) => setStoreData({...storeData, address: e.target.value})} placeholder="Store Address" className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-teal-500 text-slate-800 font-medium" />
+                    <input type="text" value={storeData.address} onChange={(e) => setStoreData({...storeData, address: e.target.value})} placeholder={t('storeAddress')} className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-teal-500 text-slate-800 font-medium" />
                   </div>
                 </div>
               </div>
             )}
 
             <div>
-              <h3 className="text-lg font-black text-slate-800 border-b border-slate-200 pb-2 mb-6 text-rose-600">Security</h3>
+              <h3 className="text-lg font-black text-slate-800 border-b border-slate-200 pb-2 mb-6 text-rose-600">{t('security')}</h3>
               <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">New Password (Optional)</label>
+                <label className="block text-sm font-bold text-slate-700 mb-2">{t('newPasswordOptional')}</label>
                 <div className="relative">
                   <Lock className="absolute left-4 top-3.5 w-5 h-5 text-slate-400" />
-                  <input type="password" value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} placeholder="Leave blank to keep current password" className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-rose-500 text-slate-800 font-medium" />
+                  <input type="password" value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} placeholder={t('keepCurrentPassword')} className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-rose-500 text-slate-800 font-medium" />
                 </div>
               </div>
             </div>
 
             <button type="submit" disabled={updating} className="w-full bg-slate-900 hover:bg-slate-800 text-white py-4 rounded-xl font-black text-lg transition-all shadow-md">
-              {updating ? 'Saving Changes...' : 'Save Changes'}
+              {updating ? t('savingChanges') : t('saveChanges')}
             </button>
           </form>
         </div>

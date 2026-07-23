@@ -38,24 +38,24 @@ const Navbar = () => {
           {user ? (
             <div className="flex items-center gap-4 border-l pl-5 border-slate-200 ml-2">
               
-              {/* 🚀 NEW: MY ORDERS BUTTON FOR CUSTOMERS */}
+              {/* 🚀 MY ORDERS BUTTON FOR CUSTOMERS */}
               {user.role === 'customer' && (
                 <Link to="/myorders" className="flex items-center gap-1.5 text-slate-700 hover:text-emerald-600 transition-colors bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
                    <Package className="w-4 h-4 text-emerald-500" />
-                   <span className="font-bold">My Orders</span>
+                   <span className="font-bold">{t('myOrdersNav')}</span>
                 </Link>
               )}
 
-              {/* 🚀 NEW: MY COMPLAINTS LINK FOR CUSTOMERS & VENDORS */}
+              {/* 🚀 MY COMPLAINTS LINK FOR CUSTOMERS & VENDORS */}
               {(user.role === 'customer' || user.role === 'vendor') && (
-                <Link to="/complaints" className="flex items-center gap-1.5 text-slate-600 hover:text-rose-600 transition-colors" title="My Complaints">
+                <Link to="/complaints" className="flex items-center gap-1.5 text-slate-600 hover:text-rose-600 transition-colors" title={t('myComplaintsNav')}>
                    <MessageSquare className="w-4 h-4" />
                 </Link>
               )}
               
               {user.role === 'admin' ? (
                 <Link to="/admin" className="flex items-center gap-1.5 text-rose-600 hover:text-rose-800 font-bold transition-colors bg-rose-50 px-3 py-1.5 rounded-lg border border-rose-200">
-                  <ShieldAlert className="w-4 h-4" /> Admin Panel
+                  <ShieldAlert className="w-4 h-4" /> {t('adminPanel')}
                 </Link>
               ) : (
                 <Link to="/profile" className="flex items-center gap-2 text-slate-700 hover:text-blue-600 transition-colors bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
@@ -65,7 +65,7 @@ const Navbar = () => {
               )}
               
               {user.role === 'vendor' && (
-                <Link to="/vendor-dashboard" className="flex items-center gap-1.5 text-slate-600 hover:text-slate-900 font-semibold transition-colors"><Store className="w-4 h-4" /> Dashboard</Link>
+                <Link to="/vendor-dashboard" className="flex items-center gap-1.5 text-slate-600 hover:text-slate-900 font-semibold transition-colors"><Store className="w-4 h-4" /> {t('vendorDashboardNav')}</Link>
               )}
               
               <button onClick={logout} className="flex items-center gap-1.5 text-slate-500 hover:text-rose-600 transition-colors font-semibold"><LogOut className="w-4 h-4" /></button>
