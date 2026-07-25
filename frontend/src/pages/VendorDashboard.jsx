@@ -2,8 +2,9 @@ import { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import API from '../services/api';
-import { Store, Package, ShoppingBag, PlusSquare, UploadCloud, X, LayoutDashboard, Database, PieChart, CheckSquare, Trash2, Edit3, Droplets, User, Phone, MapPin, CheckCircle2, AlertTriangle, Clock, MessageSquare } from 'lucide-react';
+import { Store, Package, ShoppingBag, PlusSquare, UploadCloud, X, LayoutDashboard, Database, PieChart, CheckSquare, Trash2, Edit3, Droplets, User, Phone, MapPin, CheckCircle2, AlertTriangle, Clock, MessageSquare, RotateCcw } from 'lucide-react';
 import ComplaintChat from '../components/ComplaintChat';
+import ReturnDecisionModal from '../components/ReturnDecisionModal';
 
 const VendorDashboard = () => {
   const { user } = useContext(AuthContext);
@@ -24,11 +25,12 @@ const VendorDashboard = () => {
     manufacturer: '', manufactureDate: '', expiryDate: '', imageUrl: null, prescriptionRequired: false 
   });
   const [previewUrl, setPreviewUrl] = useState(null);
-  const [medImages, setMedImages] = useState({}); // 🚀 NEW: base64 images for master-dictionary rows { [medicineId]: base64 }
-  const [medImagePreviews, setMedImagePreviews] = useState({}); // 🚀 NEW: local preview URLs for the same
+  const [medImages, setMedImages] = useState({}); // 🚀 base64 images for master-dictionary rows { [medicineId]: base64 }
+  const [medImagePreviews, setMedImagePreviews] = useState({}); // 🚀 local preview URLs for the same
   const [loading, setLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
   const [complaintOrder, setComplaintOrder] = useState(null); // 🚀 order currently open in the complaint chat modal
+  const [returnDecisionOrder, setReturnDecisionOrder] = useState(null); // 🚀 order currently open in the return decision modal
 
   const checkLiquidType = (name, composition, dosage) => {
     const combined = `${name} ${composition} ${dosage}`.toLowerCase();
@@ -96,7 +98,7 @@ const VendorDashboard = () => {
     }
   };
 
-  // 🚀 NEW: Image upload directly from the Master Dictionary table row
+  // 🚀 Image upload directly from the Master Dictionary table row
   const handleDictImageUpload = (medId, e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -122,7 +124,7 @@ const VendorDashboard = () => {
         setCustomMed({ name: '', composition: '', uses: '', price: '', stock: '', manufacturer: '', manufactureDate: '', expiryDate: '', imageUrl: null, prescriptionRequired: false });
       } else {
         const payloadPromises = Object.entries(selectedMeds).filter(([_, d]) => d.selected && d.price && d.stock).map(([id, d]) => API.post('/vendor/inventory', { medicineId: id, price: d.price, stock: d.stock }));
-        // 🚀 NEW: push uploaded images to the master medicine record (matched by name)
+        // 🚀 push uploaded images to the master medicine record (matched by name)
         const imagePromises = Object.entries(medImages).map(([medId, imgData]) => {
           const med = masterMedicines.find(m => m._id === medId);
           if (!med) return null;
@@ -155,6 +157,7 @@ const VendorDashboard = () => {
   const totalProducts = myInventory.length;
   const outOfStock = myInventory.filter(item => item.stock === 0).length;
   const pendingOrdersCount = myOrders.filter(o => o.status === 'Pending').length;
+  const pendingReturnsCount = myOrders.filter(o => o.status === 'Return Requested').length;
   const totalSales = myOrders.filter(o => o.status === 'Delivered').reduce((acc, curr) => acc + curr.totalAmount, 0);
 
   if (pageLoading) return <div className="h-screen flex items-center justify-center font-bold text-slate-500">Loading Dashboard...</div>;
@@ -210,7 +213,11 @@ const VendorDashboard = () => {
             {/* TABS */}
             <div className="flex gap-2 mb-6 border-b border-slate-200 pb-2">
               <button onClick={() => setActiveTab('inventory')} className={`px-4 py-2 text-sm font-bold rounded-t-lg transition-colors ${activeTab === 'inventory' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}>Stock Manager</button>
-              <button onClick={() => setActiveTab('orders')} className={`px-4 py-2 text-sm font-bold rounded-t-lg transition-colors flex items-center gap-2 ${activeTab === 'orders' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}>Orders {pendingOrdersCount > 0 && <span className="bg-rose-500 text-white px-1.5 py-0.5 rounded text-[10px]">{pendingOrdersCount}</span>}</button>
+              <button onClick={() => setActiveTab('orders')} className={`px-4 py-2 text-sm font-bold rounded-t-lg transition-colors flex items-center gap-2 ${activeTab === 'orders' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}>
+                Orders
+                {pendingOrdersCount > 0 && <span className="bg-rose-500 text-white px-1.5 py-0.5 rounded text-[10px]">{pendingOrdersCount}</span>}
+                {pendingReturnsCount > 0 && <span className="bg-purple-500 text-white px-1.5 py-0.5 rounded text-[10px] flex items-center gap-0.5"><RotateCcw size={9}/> {pendingReturnsCount}</span>}
+              </button>
             </div>
 
             {activeTab === 'inventory' && (
@@ -406,7 +413,7 @@ const VendorDashboard = () => {
                            <div className="flex-1">
                              <div className="flex items-center gap-3 mb-4">
                                <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded">ID: #{order._id.slice(-6)}</span>
-                               <span className={`text-[10px] font-bold uppercase px-2 py-1 rounded border ${order.status === 'Pending' ? 'bg-amber-50 text-amber-600 border-amber-200' : 'bg-blue-50 text-blue-600 border-blue-200'}`}>{order.status}</span>
+                               <span className={`text-[10px] font-bold uppercase px-2 py-1 rounded border ${order.status === 'Pending' ? 'bg-amber-50 text-amber-600 border-amber-200' : order.status === 'Return Requested' ? 'bg-purple-50 text-purple-600 border-purple-200' : 'bg-blue-50 text-blue-600 border-blue-200'}`}>{order.status}</span>
                                <button onClick={() => setComplaintOrder(order)} className="ml-auto text-[10px] font-bold text-slate-500 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-md flex items-center gap-1 transition-colors"><MessageSquare size={11}/> Report Customer</button>
                              </div>
                              <h4 className="text-lg font-bold text-slate-800 flex items-center gap-2"><User size={16} className="text-slate-400"/> {order.customerId?.name}</h4>
@@ -433,6 +440,13 @@ const VendorDashboard = () => {
                                  {order.status === 'Packed' && <button onClick={() => handleUpdateOrderStatus(order._id, 'Out for Delivery')} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-lg text-sm font-bold transition-colors">Ship Order</button>}
                                  {order.status === 'Out for Delivery' && <button onClick={() => handleUpdateOrderStatus(order._id, 'Delivered')} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-colors"><CheckCircle2 size={16}/> Delivered</button>}
                                  {order.status === 'Delivered' && <div className="w-full bg-slate-50 text-slate-500 py-2.5 rounded-lg text-sm font-bold text-center border border-slate-200">Completed ✅</div>}
+                                 {/* 🚀 NEW: Review Return button — opens the Approve/Reject modal */}
+                                 {order.status === 'Return Requested' && (
+                                   <button onClick={() => setReturnDecisionOrder(order)} className="w-full bg-purple-600 hover:bg-purple-700 text-white py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-colors">
+                                     <RotateCcw size={16}/> Review Return Request
+                                   </button>
+                                 )}
+                                 {order.status === 'Returned' && <div className="w-full bg-purple-50 text-purple-600 py-2.5 rounded-lg text-sm font-bold text-center border border-purple-200">Return Approved 🔄</div>}
                               </div>
                            </div>
                         </div>
@@ -448,6 +462,15 @@ const VendorDashboard = () => {
           orderId={complaintOrder._id}
           otherPartyLabel={complaintOrder.customerId?.name}
           onClose={() => setComplaintOrder(null)}
+        />
+      )}
+
+      {/* 🚀 NEW: RETURN DECISION MODAL */}
+      {returnDecisionOrder && (
+        <ReturnDecisionModal
+          order={returnDecisionOrder}
+          onClose={() => setReturnDecisionOrder(null)}
+          onDecided={fetchDashboardData}
         />
       )}
     </div>

@@ -20,6 +20,10 @@ const orderSchema = new mongoose.Schema({
     default: 'Pending' 
   },
   cancelReason: { type: String }, // Agar cancel/return kiya toh kyun?
+  // 🚀 NEW: Return management (Amazon-style) — customer's evidence + vendor's decision
+  returnPhotos: [{ type: String }], // base64 images of the item's condition
+  vendorReturnAction: { type: String, enum: ['Pending', 'Approved', 'Rejected'], default: 'Pending' },
+  vendorRejectionReason: { type: String },
   // 🚀 NEW: Payment tracking
   paymentMethod: { type: String, enum: ['COD', 'Online'], default: 'COD' },
   paymentStatus: { type: String, enum: ['Pending', 'Paid', 'Failed'], default: 'Pending' },

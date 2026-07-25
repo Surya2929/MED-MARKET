@@ -62,6 +62,15 @@ export const LanguageProvider = ({ children }) => {
       statusPending: "Sent to Store", statusAccepted: "Preparing", statusPacked: "Packed", statusOutForDelivery: "Out for Delivery",
       statusDelivered: "Delivered", statusCancelled: "Cancelled", statusReturnRequested: "Return Requested",
       qty: "Qty", enterCancelReason: "Please enter a reason for", orderMarkedAs: "Order marked as", failedToUpdateOrder: "Failed to update order",
+      returnReasonLabel: "Reason for Return", returnReasonWrongItem: "Wrong item delivered", returnReasonDamaged: "Item damaged / broken",
+      returnReasonNotWorking: "Not working / expired", returnReasonChangedMind: "Changed my mind", returnReasonOther: "Other",
+      describeReturnIssue: "Describe the issue", uploadPhotosOptional: "Upload photos (optional, up to 5)",
+      submitReturnRequest: "Submit Return Request", returnRequestSubmitted: "Return request submitted!",
+      returnRequestTitle: "Request a Return", returnRejectedBy: "Return rejected by pharmacy", vendorReasonLabel: "Pharmacy's reason",
+      returnDetails: "Return Details", customerReason: "Customer's Reason", evidencePhotos: "Evidence Photos",
+      approveReturn: "Approve Return", rejectReturn: "Reject Return", rejectReturnPrompt: "Please explain why you're rejecting this return (visible to the customer):",
+      returnApprovedMsg: "Return approved. Stock has been restored.", returnRejectedMsg: "Return rejected.",
+      viewReturnRequest: "View Return Request", noPhotosUploaded: "No photos uploaded", cancel: "Cancel", submit: "Submit",
 
       // Complaints
       myComplaintsTitle: "My Complaints", noComplaints: "No complaints yet", noComplaintsDesc: "Complaints you file, or that are filed against you, will show up here.",
@@ -166,6 +175,15 @@ export const LanguageProvider = ({ children }) => {
       statusPending: "दुकान को भेजा गया", statusAccepted: "तैयार हो रहा है", statusPacked: "पैक हो गया", statusOutForDelivery: "डिलीवरी के लिए निकल गया",
       statusDelivered: "डिलीवर हो गया", statusCancelled: "रद्द हो गया", statusReturnRequested: "वापसी की गुजारिश की गई",
       qty: "मात्रा", enterCancelReason: "कृपया कारण बताएं", orderMarkedAs: "ऑर्डर अपडेट हो गया —", failedToUpdateOrder: "ऑर्डर अपडेट नहीं हो पाया",
+      returnReasonLabel: "वापसी का कारण", returnReasonWrongItem: "गलत आइटम भेजा गया", returnReasonDamaged: "आइटम टूटा/खराब आया",
+      returnReasonNotWorking: "काम नहीं कर रहा / एक्सपायर हो गया", returnReasonChangedMind: "मन बदल गया", returnReasonOther: "अन्य कारण",
+      describeReturnIssue: "समस्या के बारे में बताएं", uploadPhotosOptional: "फोटो अपलोड करें (वैकल्पिक, ज्यादा से ज्यादा 5)",
+      submitReturnRequest: "वापसी का अनुरोध भेजें", returnRequestSubmitted: "वापसी का अनुरोध भेज दिया गया!",
+      returnRequestTitle: "वापसी का अनुरोध करें", returnRejectedBy: "फार्मेसी ने वापसी अस्वीकार कर दी", vendorReasonLabel: "फार्मेसी का कारण",
+      returnDetails: "वापसी की जानकारी", customerReason: "ग्राहक का कारण", evidencePhotos: "सबूत की फोटो",
+      approveReturn: "वापसी स्वीकार करें", rejectReturn: "वापसी अस्वीकार करें", rejectReturnPrompt: "बताएं कि आप यह वापसी क्यों अस्वीकार कर रहे हैं (ग्राहक को दिखेगा):",
+      returnApprovedMsg: "वापसी स्वीकार हो गई। स्टॉक वापस जुड़ गया है।", returnRejectedMsg: "वापसी अस्वीकार कर दी गई।",
+      viewReturnRequest: "वापसी का अनुरोध देखें", noPhotosUploaded: "कोई फोटो अपलोड नहीं हुई", cancel: "रद्द करें", submit: "भेजें",
 
       // Complaints
       myComplaintsTitle: "मेरी शिकायतें", noComplaints: "अभी कोई शिकायत नहीं है", noComplaintsDesc: "आपकी की हुई, या आपके खिलाफ की गई शिकायतें यहां दिखेंगी।",

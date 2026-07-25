@@ -5,6 +5,7 @@ import { LanguageContext } from '../context/LanguageContext';
 import { Package, Clock, CheckCircle2, StoreIcon, MapPin, Pill, AlertCircle, ShoppingBag, Truck, XCircle, RotateCcw, MessageSquare } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import ComplaintChat from '../components/ComplaintChat';
+import ReturnRequestModal from '../components/ReturnRequestModal';
 
 const MyOrders = () => {
   const { user } = useContext(AuthContext);
@@ -12,6 +13,7 @@ const MyOrders = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [complaintOrder, setComplaintOrder] = useState(null); // 🚀 order currently open in the complaint chat modal
+  const [returnOrder, setReturnOrder] = useState(null); // 🚀 order currently open in the return request modal
 
   const fetchOrders = async () => {
     try {
@@ -22,7 +24,7 @@ const MyOrders = () => {
 
   useEffect(() => { if (user) fetchOrders(); }, [user]);
 
-  // 🚀 CANCEL OR RETURN ORDER
+  // 🚀 CANCEL ORDER (Return now goes through the ReturnRequestModal instead of a prompt)
   const handleOrderStatusUpdate = async (orderId, newStatus) => {
     const reason = window.prompt(`${t('enterCancelReason')} ${newStatus}:`);
     if (!reason) return;
@@ -47,6 +49,7 @@ const MyOrders = () => {
       case 'Delivered': return { color: 'bg-emerald-100 text-emerald-700 border-emerald-200', icon: <CheckCircle2 className="w-4 h-4"/>, text: t('statusDelivered') };
       case 'Cancelled': return { color: 'bg-rose-100 text-rose-700 border-rose-200', icon: <XCircle className="w-4 h-4"/>, text: t('statusCancelled') };
       case 'Return Requested': return { color: 'bg-purple-100 text-purple-700 border-purple-200', icon: <RotateCcw className="w-4 h-4"/>, text: t('statusReturnRequested') };
+      case 'Returned': return { color: 'bg-purple-100 text-purple-700 border-purple-200', icon: <RotateCcw className="w-4 h-4"/>, text: 'Returned' };
       default: return { color: 'bg-slate-100 text-slate-700', icon: <AlertCircle className="w-4 h-4"/>, text: status };
     }
   };
@@ -80,11 +83,30 @@ const MyOrders = () => {
                         <button onClick={() => handleOrderStatusUpdate(order._id, 'Cancelled')} className="text-xs font-bold text-rose-500 hover:text-rose-700 bg-rose-50 px-3 py-1.5 rounded-md border border-rose-100 transition">{t('cancelOrder')}</button>
                       )}
                       {order.status === 'Delivered' && (
-                        <button onClick={() => handleOrderStatusUpdate(order._id, 'Return Requested')} className="text-xs font-bold text-purple-600 hover:text-purple-800 bg-purple-50 px-3 py-1.5 rounded-md border border-purple-100 transition">{t('returnItem')}</button>
+                        <button onClick={() => setReturnOrder(order)} className="text-xs font-bold text-purple-600 hover:text-purple-800 bg-purple-50 px-3 py-1.5 rounded-md border border-purple-100 transition">{t('returnItem')}</button>
                       )}
                       <button onClick={() => setComplaintOrder(order)} className="text-xs font-bold text-slate-600 hover:text-slate-800 bg-slate-100 px-3 py-1.5 rounded-md border border-slate-200 transition flex items-center gap-1"><MessageSquare size={12}/> {t('reportIssue')}</button>
                     </div>
                   </div>
+
+                  {/* 🚀 NEW: shows even after the order reverts to Delivered, so the customer knows why */}
+                  {order.status === 'Delivered' && order.vendorReturnAction === 'Rejected' && order.vendorRejectionReason && (
+                    <div className="mx-6 mt-4 bg-rose-50 border border-rose-200 rounded-lg p-3 flex gap-2">
+                      <XCircle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5"/>
+                      <div>
+                        <p className="text-xs font-bold text-rose-800">{t('returnRejectedBy')}</p>
+                        <p className="text-xs text-rose-700 mt-0.5">{t('vendorReasonLabel')}: {order.vendorRejectionReason}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 🚀 NEW: pending return status note */}
+                  {order.status === 'Return Requested' && (
+                    <div className="mx-6 mt-4 bg-purple-50 border border-purple-200 rounded-lg p-3 flex gap-2">
+                      <RotateCcw className="w-4 h-4 text-purple-500 shrink-0 mt-0.5"/>
+                      <p className="text-xs font-bold text-purple-800">Your return request is awaiting the pharmacy's review.</p>
+                    </div>
+                  )}
 
                   <div className="p-6 bg-white">
                     <div className="space-y-4">
@@ -106,6 +128,15 @@ const MyOrders = () => {
           orderId={complaintOrder._id}
           otherPartyLabel={complaintOrder.storeId?.storeName}
           onClose={() => setComplaintOrder(null)}
+        />
+      )}
+
+      {/* 🚀 RETURN REQUEST MODAL */}
+      {returnOrder && (
+        <ReturnRequestModal
+          order={returnOrder}
+          onClose={() => setReturnOrder(null)}
+          onSubmitted={fetchOrders}
         />
       )}
     </div>

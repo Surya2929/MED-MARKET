@@ -98,7 +98,7 @@ export const getVendorOrders = async (req, res) => {
 
 export const updateOrderStatus = async (req, res) => {
   try {
-    const { status, cancelReason } = req.body;
+    const { status, cancelReason, returnPhotos } = req.body;
     const order = await Order.findById(req.params.id);
     if (!order) return res.status(404).json({ message: 'Order not found' });
 
@@ -124,9 +124,49 @@ export const updateOrderStatus = async (req, res) => {
       } else if (status === 'Return Requested' && order.status === 'Delivered') {
         order.status = 'Return Requested';
         order.cancelReason = cancelReason;
+        order.returnPhotos = Array.isArray(returnPhotos) ? returnPhotos.slice(0, 5) : []; // 🚀 NEW: up to 5 evidence photos
+        order.vendorReturnAction = 'Pending'; // 🚀 reset — fresh request awaiting vendor decision
+        order.vendorRejectionReason = undefined;
       } else {
         return res.status(400).json({ message: 'Order cannot be cancelled/returned at this stage' });
       }
+    }
+
+    await order.save();
+    res.status(200).json(order);
+  } catch (error) { res.status(500).json({ message: error.message }); }
+};
+
+// 🚀 NEW: Vendor approves or rejects a customer's return request — mirrors a typical
+// e-commerce return workflow (Amazon-style): approve restocks the item, reject sends it
+// back to "Delivered" with the vendor's reason visible to the customer.
+export const handleReturnDecision = async (req, res) => {
+  try {
+    const { decision, vendorRejectionReason } = req.body; // decision: 'Approved' | 'Rejected'
+    const order = await Order.findById(req.params.id);
+    if (!order) return res.status(404).json({ message: 'Order not found' });
+
+    const store = await Store.findOne({ vendorId: req.user._id });
+    if (!store || order.storeId.toString() !== store._id.toString()) return res.status(403).json({ message: 'Not authorized' });
+    if (order.status !== 'Return Requested') return res.status(400).json({ message: 'This order has no pending return request.' });
+
+    if (decision === 'Approved') {
+      order.status = 'Returned';
+      order.vendorReturnAction = 'Approved';
+      // 🚀 item is coming back to the shelf — restore stock
+      for (const item of order.items) {
+        await Inventory.findOneAndUpdate(
+          { storeId: order.storeId, medicineId: item.medicineId },
+          { $inc: { stock: item.quantity } }
+        );
+      }
+    } else if (decision === 'Rejected') {
+      if (!vendorRejectionReason || !vendorRejectionReason.trim()) return res.status(400).json({ message: 'Please provide a reason for rejecting the return.' });
+      order.status = 'Delivered'; // 🚀 revert — order stands as delivered, no return happening
+      order.vendorReturnAction = 'Rejected';
+      order.vendorRejectionReason = vendorRejectionReason.trim();
+    } else {
+      return res.status(400).json({ message: 'Invalid decision.' });
     }
 
     await order.save();
