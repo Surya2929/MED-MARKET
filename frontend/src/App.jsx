@@ -33,7 +33,10 @@ function App() {
         <CartProvider>
           <LocationProvider> 
             <Router>
-              <div className="min-h-screen flex flex-col bg-slate-50 font-sans text-slate-900">
+              {/* 🚀 FIX: overflow-x-hidden here is a safety net — if any child element ever
+                  becomes wider than the viewport (e.g. a non-responsive component), this
+                  stops the WHOLE page from scrolling sideways on mobile. */}
+              <div className="min-h-screen flex flex-col bg-slate-50 font-sans text-slate-900 overflow-x-hidden">
                 <Navbar />
                 <main className="flex-1">
                   <Routes>
