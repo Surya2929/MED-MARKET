@@ -13,8 +13,6 @@ API.interceptors.request.use((req) => {
   return req;
 });
 
-// 🚀 NEW: if the backend says the token is invalid/expired, OR the account got suspended
-// mid-session, force a clean logout instead of leaving a broken half-logged-in UI.
 API.interceptors.response.use(
   (res) => res,
   (error) => {
