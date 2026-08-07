@@ -4,12 +4,8 @@ import { AuthContext } from '../context/AuthContext';
 import { LanguageContext } from '../context/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import API from '../services/api';
-import { ChevronLeft, Trash2, ShoppingBag, ArrowRight, Home, UploadCloud, X, Receipt, FileWarning, AlertCircle, Truck, CreditCard } from 'lucide-react';
-
-const isValidAddress = (address) => {
-  if (!address || address.trim().length < 15) return false;
-  return /\b\d{6}\b/.test(address);
-};
+import AddressSelector from '../components/AddressSelector';
+import { ChevronLeft, Trash2, ShoppingBag, ArrowRight, MapPin, UploadCloud, X, Receipt, FileWarning, AlertCircle, Truck, CreditCard } from 'lucide-react';
 
 const CartPage = () => {
   const { cart, removeFromCart, clearCart, updateQuantity } = useContext(CartContext);
@@ -18,8 +14,7 @@ const CartPage = () => {
   const navigate = useNavigate();
   const [step, setStep] = useState('cart');
   const [loading, setLoading] = useState(false);
-  const [address, setAddress] = useState('');
-  const [addressTouched, setAddressTouched] = useState(false);
+  const [selectedAddress, setSelectedAddress] = useState(null);
   const [prescription, setPrescription] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState('cod');
@@ -29,7 +24,11 @@ const CartPage = () => {
   const totalAmount = itemTotal + deliveryFee;
 
   const needsPrescription = cart.some(i => i.prescriptionRequired);
-  const addressValid = isValidAddress(address);
+
+  const buildAddressString = () => {
+    if (!selectedAddress) return '';
+    return `${selectedAddress.fullName}, ${selectedAddress.addressLine}, ${selectedAddress.city}, ${selectedAddress.state} - ${selectedAddress.pincode} (Phone: ${selectedAddress.phone})`;
+  };
 
   const handleImage = (e) => {
     const file = e.target.files[0];
@@ -42,8 +41,7 @@ const CartPage = () => {
   };
 
   const validateBeforeCheckout = () => {
-    setAddressTouched(true);
-    if (!addressValid) { alert(t('addressValidationAlert')); return false; }
+    if (!selectedAddress) { alert('Please select or add a delivery address.'); return false; }
     if (needsPrescription && !prescription) { alert(t('prescriptionValidationAlert')); return false; }
     return true;
   };
@@ -54,7 +52,7 @@ const CartPage = () => {
       await API.post('/orders', {
         storeId: cart[0].storeId,
         items: cart,
-        deliveryAddress: address,
+        deliveryAddress: buildAddressString(),
         prescriptionImage: prescription
       });
       alert(t('orderPlacedSuccess'));
@@ -70,7 +68,7 @@ const CartPage = () => {
       const { data } = await API.post('/payments/create-order', {
         storeId: cart[0].storeId,
         items: cart,
-        deliveryAddress: address,
+        deliveryAddress: buildAddressString(),
         prescriptionImage: prescription
       });
 
@@ -81,7 +79,7 @@ const CartPage = () => {
         name: 'MedMarket',
         description: 'Medicine Order Payment',
         order_id: data.razorpayOrderId,
-        prefill: { name: user?.name, email: user?.email },
+        prefill: { name: user?.name, email: user?.email, contact: selectedAddress?.phone },
         theme: { color: '#2563eb' },
         handler: async (response) => {
           try {
@@ -99,9 +97,7 @@ const CartPage = () => {
             setLoading(false);
           }
         },
-        modal: {
-          ondismiss: () => setLoading(false)
-        }
+        modal: { ondismiss: () => setLoading(false) }
       };
 
       const rzp = new window.Razorpay(options);
@@ -192,38 +188,26 @@ const CartPage = () => {
 
           {step === 'checkout' && (
             <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                  <h3 className={`text-sm font-bold mb-4 flex items-center gap-2 ${needsPrescription ? 'text-rose-700' : 'text-slate-700'}`}>
-                    <UploadCloud size={18} className={needsPrescription ? 'text-rose-500' : 'text-blue-500'}/> {needsPrescription ? t('prescriptionRequiredLabel') : t('prescriptionOptional')}
-                  </h3>
-                  {!previewUrl ? (
-                    <label className={`border-2 border-dashed rounded-lg h-24 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-50 transition ${needsPrescription ? 'border-rose-300' : 'border-slate-300'}`}>
-                      <span className="text-xs font-semibold text-slate-500">{t('clickToUpload')}</span>
-                      <input type="file" onChange={handleImage} className="hidden" />
-                    </label>
-                  ) : (
-                    <div className="relative h-24 rounded-lg overflow-hidden border border-slate-200">
-                      <img src={previewUrl} className="w-full h-full object-cover" />
-                      <button onClick={() => {setPreviewUrl(null); setPrescription(null);}} className="absolute top-1 right-1 bg-rose-500 text-white p-1 rounded"><X size={12}/></button>
-                    </div>
-                  )}
-                </div>
+              <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                <h3 className="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2"><MapPin size={18} className="text-blue-500"/> Deliver To</h3>
+                <AddressSelector selectedId={selectedAddress?._id} onSelect={setSelectedAddress} />
+              </div>
 
-                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                  <h3 className="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2"><Home size={18} className="text-blue-500"/> {t('deliveryAddress')}</h3>
-                  <textarea
-                    value={address}
-                    onChange={e=>setAddress(e.target.value)}
-                    onBlur={() => setAddressTouched(true)}
-                    className={`w-full p-3 bg-slate-50 border rounded-lg outline-none text-sm ${addressTouched && !addressValid ? 'border-rose-400 focus:border-rose-500' : 'border-slate-200 focus:border-blue-500'}`}
-                    rows="3"
-                    placeholder={t('addressPlaceholder')}
-                  />
-                  {addressTouched && !addressValid && (
-                    <p className="text-[11px] text-rose-600 font-semibold mt-1.5 flex items-center gap-1"><AlertCircle size={12}/> {t('addressError')}</p>
-                  )}
-                </div>
+              <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                <h3 className={`text-sm font-bold mb-4 flex items-center gap-2 ${needsPrescription ? 'text-rose-700' : 'text-slate-700'}`}>
+                  <UploadCloud size={18} className={needsPrescription ? 'text-rose-500' : 'text-blue-500'}/> {needsPrescription ? t('prescriptionRequiredLabel') : t('prescriptionOptional')}
+                </h3>
+                {!previewUrl ? (
+                  <label className={`border-2 border-dashed rounded-lg h-24 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-50 transition ${needsPrescription ? 'border-rose-300' : 'border-slate-300'}`}>
+                    <span className="text-xs font-semibold text-slate-500">{t('clickToUpload')}</span>
+                    <input type="file" onChange={handleImage} className="hidden" />
+                  </label>
+                ) : (
+                  <div className="relative h-24 rounded-lg overflow-hidden border border-slate-200 w-fit">
+                    <img src={previewUrl} className="h-full object-cover" />
+                    <button onClick={() => {setPreviewUrl(null); setPrescription(null);}} className="absolute top-1 right-1 bg-rose-500 text-white p-1 rounded"><X size={12}/></button>
+                  </div>
+                )}
               </div>
 
               <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">

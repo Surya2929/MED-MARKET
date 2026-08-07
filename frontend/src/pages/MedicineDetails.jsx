@@ -5,14 +5,12 @@ import { AuthContext } from '../context/AuthContext';
 import { LanguageContext } from '../context/LanguageContext';
 import { ChevronLeft, ShoppingCart, ShieldCheck, Building2, FlaskConical, Calendar, AlertCircle, ImageOff, StoreIcon, Truck, MapPin, Minus, Plus, FileWarning } from 'lucide-react';
 
-// 🚀 Same stock-hiding rule as SearchPage — never reveal exact low counts to customers
 const getStockLabel = (stock, t) => {
   if (stock <= 0) return { text: t('outOfStockLabel'), color: 'text-rose-600' };
   if (stock <= 5) return { text: t('fewLeft'), color: 'text-amber-600' };
   return { text: t('inStockLabel'), color: 'text-emerald-600' };
 };
 
-// 🚀 NEW: compact "Available At" row with its own qty selector + Add to Cart, used inside the details page
 const AvailabilityRow = ({ store, medicine, onAdd, t }) => {
   const [qty, setQty] = useState(1);
   const handleQtyChange = (e) => {
@@ -59,12 +57,9 @@ const MedicineDetail = () => {
   const { t } = useContext(LanguageContext);
   const [availTab, setAvailTab] = useState('local');
 
-  // 🚀 FIX: SearchPage navigates with router `state` (not a URL :id param),
-  // so we read the medicine info from location.state instead of useParams().
   const { item, imageUrl, typeLabel, translated } = location.state || {};
   const medicine = item?.medicineInfo;
 
-  // 🚀 Error / Not Found State (e.g. page refreshed or opened directly without state)
   if (!medicine) {
     return (
       <div className="h-screen bg-slate-50 flex flex-col items-center justify-center">
@@ -98,13 +93,12 @@ const MedicineDetail = () => {
       imageUrl: medicine.imageUrl,
       prescriptionRequired: !!medicine.prescriptionRequired
     }, qty);
-    alert('Added to cart!');
+    // 🚀 FIX: no more alert() here — CartToast now shows a proper Amazon-style popup automatically
   };
 
   return (
     <div className="bg-slate-50 min-h-screen pb-20 font-sans">
 
-      {/* 🚀 HEADER WITH BACK BUTTON */}
       <div className="bg-white border-b border-slate-200 sticky top-0 z-50 px-4 py-3 flex items-center justify-between shadow-sm">
         <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-slate-600 hover:text-blue-600 font-semibold transition-colors bg-slate-100 px-3 py-1.5 rounded-lg">
           <ChevronLeft size={18}/> Back
@@ -119,7 +113,6 @@ const MedicineDetail = () => {
       <div className="max-w-5xl mx-auto px-4 mt-8">
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col md:flex-row">
 
-          {/* 🚀 PHOTO SECTION (100% FIXED FOR BASE64) */}
           <div className="md:w-5/12 bg-slate-50 border-r border-slate-100 flex items-center justify-center p-8 relative min-h-[300px]">
             {displayImage ? (
               <img src={displayImage} alt={displayName} className="max-w-full max-h-[350px] object-contain drop-shadow-md rounded-xl" />
@@ -134,7 +127,6 @@ const MedicineDetail = () => {
             </div>
           </div>
 
-          {/* 🚀 DETAILS SECTION */}
           <div className="md:w-7/12 p-6 md:p-10 flex flex-col justify-between">
             <div className="space-y-6">
 
@@ -152,7 +144,6 @@ const MedicineDetail = () => {
                       {typeLabel}
                     </span>
                   )}
-                  {/* 🚀 NEW: Prescription Required badge */}
                   {medicine.prescriptionRequired && (
                     <span className="flex items-center gap-1.5 text-xs font-bold text-rose-700 bg-rose-50 px-3 py-1.5 rounded-md uppercase tracking-wider border border-rose-100">
                       <FileWarning size={14}/> {t('rxRequired')}
@@ -197,7 +188,6 @@ const MedicineDetail = () => {
           </div>
         </div>
 
-        {/* 🚀 NEW: AVAILABLE AT + ADD TO CART SECTION */}
         {(localStores.length > 0 || onlineStores.length > 0) && (
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 mt-6 p-6">
             <h3 className="text-lg font-bold text-slate-800 mb-4">Available At</h3>

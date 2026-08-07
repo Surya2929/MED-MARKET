@@ -8,13 +8,22 @@ export const CartProvider = ({ children }) => {
     return savedCart ? JSON.parse(savedCart) : [];
   });
 
+  // 🚀 NEW: Amazon-style "Added to Cart" popup — set whenever addToCart runs, auto-dismisses
+  const [toast, setToast] = useState(null);
+
   useEffect(() => {
     localStorage.setItem('medCart', JSON.stringify(cart));
   }, [cart]);
 
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => setToast(null), 3000);
+    return () => clearTimeout(timer);
+  }, [toast]);
+
   const addToCart = (item, qty) => {
     setCart((prev) => {
-      // 🚀 FIX: Ek order sirf ek hi store se ho sakta hai (checkout single storeId use karta hai)
+      // 🚀 Ek order sirf ek hi store se ho sakta hai (checkout single storeId use karta hai)
       if (prev.length > 0 && String(prev[0].storeId) !== String(item.storeId)) {
         const confirmSwitch = window.confirm(
           `Your cart has items from "${prev[0].storeName}". Adding this item will clear your cart and start a new order from "${item.storeName}". Continue?`
@@ -30,6 +39,9 @@ export const CartProvider = ({ children }) => {
       }
       return [...prev, { ...item, quantity: Math.min(qty, item.stock) }];
     });
+
+    // 🚀 NEW: trigger the Amazon-style popup with this item's info
+    setToast({ name: item.medicineName, price: item.price, qty, imageUrl: item.imageUrl });
   };
 
   const updateQuantity = (inventoryId, newQty, stockLimit) => {
@@ -53,7 +65,7 @@ export const CartProvider = ({ children }) => {
   const clearCart = () => setCart([]);
 
   return (
-    <CartContext.Provider value={{ cart, addToCart, removeFromCart, clearCart, updateQuantity }}>
+    <CartContext.Provider value={{ cart, addToCart, removeFromCart, clearCart, updateQuantity, toast, dismissToast: () => setToast(null) }}>
       {children}
     </CartContext.Provider>
   );
