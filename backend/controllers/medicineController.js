@@ -16,7 +16,6 @@ export const addMasterMedicine = async (req, res) => {
     let medicine = await Medicine.findOne({ name: { $regex: new RegExp(`^${name}$`, 'i') } });
     
     if (medicine) {
-      // Update existing if new info comes
       medicine.manufacturer = manufacturer || medicine.manufacturer;
       medicine.manufactureDate = manufactureDate || medicine.manufactureDate;
       medicine.expiryDate = expiryDate || medicine.expiryDate;
@@ -92,7 +91,7 @@ export const deleteVendorInventory = async (req, res) => {
   }
 };
 
-// 🚀 ORIGINAL SEARCH & COMPARE WITH GROQ AI (RESTORED 100%)
+// 🚀 SEARCH & COMPARE WITH GROQ AI FALLBACK
 export const searchAndCompare = async (req, res) => {
   try {
     let { q: searchQuery, city } = req.query; 
@@ -117,7 +116,7 @@ export const searchAndCompare = async (req, res) => {
 
         const chatCompletion = await groq.chat.completions.create({
           messages: [{ role: 'system', content: aiPrompt }],
-          model: 'llama-3.1-8b-instant',
+          model: 'openai/gpt-oss-120b', // 🚀 UPGRADED: much more capable model (the old llama-3.1-8b-instant was deprecated by Groq)
           temperature: 0.1,
         });
 
@@ -159,10 +158,12 @@ export const searchAndCompare = async (req, res) => {
     
     const allMedicineIds = [...exactMedicineIds, ...alternativeMedicines.map(m => m._id)];
 
+    // 🚀 nested-populate vendor block status so suspended vendors' medicines never show to customers
     let inventoryResults = await Inventory.find({ medicineId: { $in: allMedicineIds } })
       .populate('medicineId')
       .populate({ path: 'storeId', select: 'storeName address isVerified storeType vendorId', populate: { path: 'vendorId', select: 'isBlocked' } });
 
+    // 🚀 City filter: local stores are filtered by city, online stores always show regardless of city
     if (city && city !== 'All Cities' && city !== 'Select Location') {
        let cityKeyword = city.split(',').pop().trim().toLowerCase().replace('district', '').trim();
        inventoryResults = inventoryResults.filter(inv => {
@@ -179,8 +180,8 @@ export const searchAndCompare = async (req, res) => {
         const availableStores = inventoryResults.filter(
           inv => inv.medicineId && inv.medicineId._id.toString() === med._id.toString() && inv.stock > 0 
             && inv.storeId?.isVerified === true
-            && !inv.isBlocked // 🚀 NEW: admin-blocked listing hidden from customers
-            && !inv.storeId?.vendorId?.isBlocked // 🚀 FIX: a suspended vendor's medicines no longer show up
+            && !inv.isBlocked // admin-blocked listing hidden from customers
+            && !inv.storeId?.vendorId?.isBlocked // a suspended vendor's medicines no longer show up
         );
 
         return {
@@ -236,7 +237,7 @@ export const getSuggestions = async (req, res) => {
   }
 };
 
-// 🚀 NEW: Translate a batch of medicine text fields (name/composition/uses etc.) to Hindi via Groq
+// 🚀 Translate a batch of medicine text fields (name/composition/uses etc.) to Hindi via Groq
 export const translateTexts = async (req, res) => {
   try {
     const { texts } = req.body;
@@ -252,7 +253,7 @@ Input: ${JSON.stringify(texts)}`;
 
     const chatCompletion = await groq.chat.completions.create({
       messages: [{ role: 'system', content: prompt }],
-      model: 'llama-3.1-8b-instant',
+      model: 'openai/gpt-oss-120b', // 🚀 UPGRADED: much more capable model (the old llama-3.1-8b-instant was deprecated by Groq)
       temperature: 0.1,
     });
 

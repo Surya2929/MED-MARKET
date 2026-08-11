@@ -3,12 +3,16 @@ import API from '../services/api';
 import { AuthContext } from '../context/AuthContext';
 import { X, Send, AlertCircle, MessageSquare } from 'lucide-react';
 
-const REASONS = ['Wrong / Damaged Item', 'Product Quality Issue', 'Payment / Refund Issue', 'Rude Behavior', 'Delivery Delay', 'Other'];
+const CUSTOMER_REASONS = ['Wrong / Damaged Item', 'Product Quality Issue', 'Payment / Refund Issue', 'Rude Behavior', 'Delivery Delay', 'Other'];
+const VENDOR_REASONS = ['Customer Abusive / Rude', 'Fake or Prank Order', 'Customer Refused COD Payment', 'False Return / Damage Claim', 'Wrong or Incomplete Address', 'Other'];
 
 const ComplaintChat = ({ orderId, reportId, otherPartyLabel, onClose }) => {
   const { user } = useContext(AuthContext);
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  const REASONS = user?.role === 'vendor' ? VENDOR_REASONS : CUSTOMER_REASONS;
+
   const [reason, setReason] = useState(REASONS[0]);
   const [description, setDescription] = useState('');
   const [msgText, setMsgText] = useState('');
@@ -76,13 +80,13 @@ const ComplaintChat = ({ orderId, reportId, otherPartyLabel, onClose }) => {
             </div>
             <div>
               <label className="text-xs font-bold text-slate-600 mb-1 block">Reason</label>
-              <select value={reason} onChange={e=>setReason(e.target.value)} className="w-full p-2.5 border border-slate-300 rounded-lg text-sm outline-none focus:border-blue-500">
+              <select value={reason} onChange={e => setReason(e.target.value)} className="w-full p-2.5 border border-slate-300 rounded-lg text-sm outline-none focus:border-blue-500">
                 {REASONS.map(r => <option key={r} value={r}>{r}</option>)}
               </select>
             </div>
             <div>
               <label className="text-xs font-bold text-slate-600 mb-1 block">Describe the issue</label>
-              <textarea value={description} onChange={e=>setDescription(e.target.value)} rows="5" className="w-full p-2.5 border border-slate-300 rounded-lg text-sm outline-none focus:border-blue-500 resize-none" placeholder="What went wrong?" />
+              <textarea value={description} onChange={e => setDescription(e.target.value)} rows="5" className="w-full p-2.5 border border-slate-300 rounded-lg text-sm outline-none focus:border-blue-500 resize-none" placeholder="What went wrong?" />
             </div>
             <button onClick={handleCreate} disabled={sending} className="w-full bg-rose-600 hover:bg-rose-700 text-white py-2.5 rounded-lg font-bold text-sm disabled:bg-slate-300">
               {sending ? 'Submitting...' : 'Submit Complaint'}
@@ -106,7 +110,7 @@ const ComplaintChat = ({ orderId, reportId, otherPartyLabel, onClose }) => {
               <div ref={bottomRef} />
             </div>
             <div className="p-3 border-t border-slate-200 flex gap-2 shrink-0">
-              <input value={msgText} onChange={e=>setMsgText(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSend()} placeholder="Type a message..." className="flex-1 px-3.5 py-2.5 bg-slate-100 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+              <input value={msgText} onChange={e => setMsgText(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSend()} placeholder="Type a message..." className="flex-1 px-3.5 py-2.5 bg-slate-100 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" />
               <button onClick={handleSend} disabled={sending} className="bg-blue-600 hover:bg-blue-700 text-white p-2.5 rounded-lg disabled:bg-slate-300"><Send size={18}/></button>
             </div>
           </>
