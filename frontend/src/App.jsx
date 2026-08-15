@@ -22,7 +22,12 @@ import MyComplaints from './pages/MyComplaints';
 import NotFound from './pages/NotFound';
 
 const ProtectedRoute = ({ children }) => {
-  const { user } = useContext(AuthContext);
+  const { user, checkingSession } = useContext(AuthContext);
+
+  if (checkingSession) {
+    return <div className="h-screen flex items-center justify-center text-slate-400 font-bold">Loading...</div>;
+  }
+
   if (!user) return <Navigate to="/login" replace />;
   return children;
 };

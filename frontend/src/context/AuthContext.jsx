@@ -5,12 +5,25 @@ export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [checkingSession, setCheckingSession] = useState(true);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('userInfo');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
+    const verifySession = async () => {
+      const storedUser = localStorage.getItem('userInfo');
+      if (!storedUser) { setCheckingSession(false); return; }
+
+      try {
+        setUser(JSON.parse(storedUser));
+        await API.get('/users/profile');
+      } catch (err) {
+        if (err.response?.status === 401) {
+          setUser(null);
+        }
+      } finally {
+        setCheckingSession(false);
+      }
+    };
+    verifySession();
   }, []);
 
   const login = async (email, password) => {
@@ -24,7 +37,6 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // 🚀 FIX: REAL OTP LOGIN (Ab Backend se Asli Token aayega)
   const otpLogin = async (phone, otp) => {
     try {
       const { data } = await API.post('/auth/verify-otp', { phone, otp });
@@ -36,7 +48,6 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // 🚀 NEW: Google Sign-In — credential is the ID token from Google's Identity Services popup
   const googleLogin = async (credential) => {
     try {
       const { data } = await API.post('/auth/google', { credential });
@@ -48,7 +59,6 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // 🚀 NEW: Forgot Password flow — step 1: send OTP to the phone on file
   const sendResetOtp = async (phone) => {
     try {
       await API.post('/auth/send-otp', { phone });
@@ -58,7 +68,6 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // 🚀 NEW: Forgot Password flow — step 2: verify OTP + set new password
   const resetPassword = async (phone, otp, newPassword) => {
     try {
       const { data } = await API.post('/auth/reset-password', { phone, otp, newPassword });
@@ -76,7 +85,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, otpLogin, googleLogin, sendResetOtp, resetPassword, logout }}>
+    <AuthContext.Provider value={{ user, login, otpLogin, googleLogin, sendResetOtp, resetPassword, logout, checkingSession }}>
       {children}
     </AuthContext.Provider>
   );
