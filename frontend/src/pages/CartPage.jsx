@@ -1,11 +1,11 @@
-import { useContext, useState } from 'react';
+import { useContext, useState, useEffect } from 'react';
 import { CartContext } from '../context/CartContext';
 import { AuthContext } from '../context/AuthContext';
 import { LanguageContext } from '../context/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import API from '../services/api';
 import AddressSelector from '../components/AddressSelector';
-import { ChevronLeft, Trash2, ShoppingBag, ArrowRight, MapPin, UploadCloud, X, Receipt, FileWarning, AlertCircle, Truck, CreditCard } from 'lucide-react';
+import { ChevronLeft, Trash2, ShoppingBag, ArrowRight, MapPin, UploadCloud, X, Receipt, FileWarning, Truck, CreditCard, Wallet } from 'lucide-react';
 
 const CartPage = () => {
   const { cart, removeFromCart, clearCart, updateQuantity } = useContext(CartContext);
@@ -19,9 +19,25 @@ const CartPage = () => {
   const [previewUrl, setPreviewUrl] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState('cod');
 
+  const [walletBalance, setWalletBalance] = useState(0);
+  const [useWallet, setUseWallet] = useState(false);
+
+  useEffect(() => {
+    const fetchWallet = async () => {
+      try {
+        const { data } = await API.get('/wallet');
+        setWalletBalance(data.balance || 0);
+      } catch (e) { /* silently ignore — wallet is optional */ }
+    };
+    if (user) fetchWallet();
+  }, [user]);
+
   const itemTotal = cart.reduce((acc, i) => acc + (i.price * i.quantity), 0);
   const deliveryFee = itemTotal > 500 ? 0 : 40;
   const totalAmount = itemTotal + deliveryFee;
+
+  const walletDeduction = useWallet ? Math.min(walletBalance, totalAmount) : 0;
+  const payableAmount = totalAmount - walletDeduction;
 
   const needsPrescription = cart.some(i => i.prescriptionRequired);
 
@@ -53,7 +69,8 @@ const CartPage = () => {
         storeId: cart[0].storeId,
         items: cart,
         deliveryAddress: buildAddressString(),
-        prescriptionImage: prescription
+        prescriptionImage: prescription,
+        useWallet
       });
       alert(t('orderPlacedSuccess'));
       clearCart();
@@ -69,7 +86,8 @@ const CartPage = () => {
         storeId: cart[0].storeId,
         items: cart,
         deliveryAddress: buildAddressString(),
-        prescriptionImage: prescription
+        prescriptionImage: prescription,
+        useWallet
       });
 
       const options = {
@@ -193,6 +211,23 @@ const CartPage = () => {
                 <AddressSelector selectedId={selectedAddress?._id} onSelect={setSelectedAddress} />
               </div>
 
+              {walletBalance > 0 && (
+                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                  <label className="flex items-center justify-between cursor-pointer">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 bg-emerald-50 rounded-full flex items-center justify-center">
+                        <Wallet size={18} className="text-emerald-600"/>
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-slate-800">Use Wallet Balance</p>
+                        <p className="text-xs text-slate-500">₹{walletBalance} available</p>
+                      </div>
+                    </div>
+                    <input type="checkbox" checked={useWallet} onChange={e => setUseWallet(e.target.checked)} className="w-5 h-5 accent-emerald-600" />
+                  </label>
+                </div>
+              )}
+
               <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
                 <h3 className={`text-sm font-bold mb-4 flex items-center gap-2 ${needsPrescription ? 'text-rose-700' : 'text-slate-700'}`}>
                   <UploadCloud size={18} className={needsPrescription ? 'text-rose-500' : 'text-blue-500'}/> {needsPrescription ? t('prescriptionRequiredLabel') : t('prescriptionOptional')}
@@ -210,21 +245,28 @@ const CartPage = () => {
                 )}
               </div>
 
-              <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                <h3 className="text-sm font-bold text-slate-700 mb-4">{t('paymentMethod')}</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <label className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all ${paymentMethod === 'cod' ? 'border-blue-500 bg-blue-50/50 shadow-sm' : 'border-slate-200 hover:border-slate-300'}`}>
-                    <input type="radio" name="paymentMethod" value="cod" checked={paymentMethod === 'cod'} onChange={() => setPaymentMethod('cod')} className="w-4 h-4 accent-blue-600" />
-                    <Truck size={20} className={paymentMethod === 'cod' ? 'text-blue-600' : 'text-slate-400'} />
-                    <span className="font-bold text-sm text-slate-800">{t('cashOnDelivery')}</span>
-                  </label>
-                  <label className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all ${paymentMethod === 'online' ? 'border-blue-500 bg-blue-50/50 shadow-sm' : 'border-slate-200 hover:border-slate-300'}`}>
-                    <input type="radio" name="paymentMethod" value="online" checked={paymentMethod === 'online'} onChange={() => setPaymentMethod('online')} className="w-4 h-4 accent-blue-600" />
-                    <CreditCard size={20} className={paymentMethod === 'online' ? 'text-blue-600' : 'text-slate-400'} />
-                    <span className="font-bold text-sm text-slate-800">{t('payOnline')}</span>
-                  </label>
+              {payableAmount > 0 && (
+                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                  <h3 className="text-sm font-bold text-slate-700 mb-4">{t('paymentMethod')}</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <label className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all ${paymentMethod === 'cod' ? 'border-blue-500 bg-blue-50/50 shadow-sm' : 'border-slate-200 hover:border-slate-300'}`}>
+                      <input type="radio" name="paymentMethod" value="cod" checked={paymentMethod === 'cod'} onChange={() => setPaymentMethod('cod')} className="w-4 h-4 accent-blue-600" />
+                      <Truck size={20} className={paymentMethod === 'cod' ? 'text-blue-600' : 'text-slate-400'} />
+                      <span className="font-bold text-sm text-slate-800">{t('cashOnDelivery')}</span>
+                    </label>
+                    <label className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all ${paymentMethod === 'online' ? 'border-blue-500 bg-blue-50/50 shadow-sm' : 'border-slate-200 hover:border-slate-300'}`}>
+                      <input type="radio" name="paymentMethod" value="online" checked={paymentMethod === 'online'} onChange={() => setPaymentMethod('online')} className="w-4 h-4 accent-blue-600" />
+                      <CreditCard size={20} className={paymentMethod === 'online' ? 'text-blue-600' : 'text-slate-400'} />
+                      <span className="font-bold text-sm text-slate-800">{t('payOnline')}</span>
+                    </label>
+                  </div>
                 </div>
-              </div>
+              )}
+              {payableAmount <= 0 && (
+                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-sm font-bold text-emerald-800">
+                  Your Wallet balance fully covers this order — no additional payment needed. Order will be placed as Cash on Delivery with ₹0 due.
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -235,7 +277,13 @@ const CartPage = () => {
             <div className="space-y-3 text-sm font-medium text-slate-600 mb-6">
               <div className="flex justify-between"><span>{t('itemTotal')}</span><span>₹{itemTotal}</span></div>
               <div className="flex justify-between"><span>{t('deliveryFee')}</span><span className="text-emerald-600 font-bold">{deliveryFee === 0 ? t('free') : `₹${deliveryFee}`}</span></div>
-              <div className="flex justify-between border-t border-slate-100 pt-3 text-lg font-black text-slate-900"><span>{t('toPay')}</span><span>₹{totalAmount}</span></div>
+              {step === 'checkout' && walletDeduction > 0 && (
+                <div className="flex justify-between text-emerald-600"><span className="flex items-center gap-1"><Wallet size={14}/> Wallet Applied</span><span>-₹{walletDeduction}</span></div>
+              )}
+              <div className="flex justify-between border-t border-slate-100 pt-3 text-lg font-black text-slate-900">
+                <span>{t('toPay')}</span>
+                <span>₹{step === 'checkout' ? payableAmount : totalAmount}</span>
+              </div>
             </div>
 
             {step === 'cart' ? (

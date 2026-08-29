@@ -19,6 +19,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import MedicineDetails from './pages/MedicineDetails'; 
 import MyOrders from './pages/MyOrders';
 import MyComplaints from './pages/MyComplaints';
+import WalletPage from './pages/WalletPage';
 import NotFound from './pages/NotFound';
 
 const ProtectedRoute = ({ children }) => {
@@ -54,6 +55,7 @@ function App() {
                     <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} /> 
                     <Route path="/myorders" element={<ProtectedRoute><MyOrders /></ProtectedRoute>} />
                     <Route path="/complaints" element={<ProtectedRoute><MyComplaints /></ProtectedRoute>} />
+                    <Route path="/wallet" element={<ProtectedRoute><WalletPage /></ProtectedRoute>} />
                     <Route path="/vendor-dashboard" element={<ProtectedRoute><VendorDashboard /></ProtectedRoute>} />
                     <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
                     <Route path="*" element={<NotFound />} />

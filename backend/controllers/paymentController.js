@@ -3,17 +3,14 @@ import crypto from 'crypto';
 import Order from '../models/Order.js';
 import Inventory from '../models/Inventory.js';
 import { verifyCartItems } from './orderController.js';
+import { debitWallet } from './walletController.js';
 
 const razorpay = (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET)
   ? new Razorpay({ key_id: process.env.RAZORPAY_KEY_ID, key_secret: process.env.RAZORPAY_KEY_SECRET })
   : null;
 
-// 🚀 In-memory store for pending checkouts awaiting payment confirmation (keyed by Razorpay order id).
-// Holds the SERVER-COMPUTED price/stock/prescription check so the /verify step never has to
-// trust anything the client sends back after payment.
 const pendingCheckouts = new Map();
 
-// Clean up stale pending checkouts older than 30 minutes (in case a user abandons payment)
 setInterval(() => {
   const now = Date.now();
   for (const [key, val] of pendingCheckouts.entries()) {
@@ -25,11 +22,17 @@ export const createRazorpayOrder = async (req, res) => {
   try {
     if (!razorpay) return res.status(500).json({ message: 'Online payments are not configured on the server yet.' });
 
-    const { storeId, items, deliveryAddress, prescriptionImage } = req.body;
-    const { verifiedItems, totalAmount } = await verifyCartItems(storeId, items, deliveryAddress, prescriptionImage);
+    const { storeId, items, deliveryAddress, prescriptionImage, useWallet } = req.body;
+    const { verifiedItems, totalAmount, walletUsed, payableAmount } = await verifyCartItems(
+      storeId, items, deliveryAddress, prescriptionImage, req.user._id, useWallet
+    );
+
+    if (payableAmount <= 0) {
+      return res.status(400).json({ message: 'Your wallet balance covers this entire order. Please place it using Cash on Delivery instead — no payment gateway is needed.' });
+    }
 
     const razorpayOrder = await razorpay.orders.create({
-      amount: Math.round(totalAmount * 100), // Razorpay wants paise
+      amount: Math.round(payableAmount * 100),
       currency: 'INR',
       receipt: `rcpt_${Date.now()}`
     });
@@ -41,6 +44,7 @@ export const createRazorpayOrder = async (req, res) => {
       prescriptionImage: prescriptionImage || null,
       items: verifiedItems,
       totalAmount,
+      walletUsed,
       createdAt: Date.now()
     });
 
@@ -67,7 +71,6 @@ export const verifyRazorpayPayment = async (req, res) => {
     if (!pending) return res.status(400).json({ message: 'Checkout session expired or not found. Please try again.' });
     if (pending.customerId !== req.user._id.toString()) return res.status(403).json({ message: 'Not authorized.' });
 
-    // 🚀 Verify the payment is genuine using Razorpay's HMAC signature scheme
     const expectedSignature = crypto
       .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
       .update(`${razorpay_order_id}|${razorpay_payment_id}`)
@@ -78,7 +81,6 @@ export const verifyRazorpayPayment = async (req, res) => {
       return res.status(400).json({ message: 'Payment verification failed. If money was deducted, it will be auto-refunded within a few days.' });
     }
 
-    // 🚀 Re-check stock right before creating the order (in case it sold out while the user was paying)
     for (const item of pending.items) {
       const inv = await Inventory.findOne({ storeId: pending.storeId, medicineId: item.medicineId });
       if (!inv || inv.stock < item.quantity) {
@@ -97,6 +99,7 @@ export const verifyRazorpayPayment = async (req, res) => {
       prescriptionImage: pending.prescriptionImage,
       items: pending.items,
       totalAmount: pending.totalAmount,
+      walletUsed: pending.walletUsed,
       status: 'Pending',
       paymentMethod: 'Online',
       paymentStatus: 'Paid',
@@ -109,6 +112,10 @@ export const verifyRazorpayPayment = async (req, res) => {
         { storeId: pending.storeId, medicineId: item.medicineId },
         { $inc: { stock: -item.quantity } }
       );
+    }
+
+    if (pending.walletUsed > 0) {
+      await debitWallet(pending.customerId, pending.walletUsed, `Used on Order #${order._id.toString().slice(-6)}`, order._id);
     }
 
     pendingCheckouts.delete(razorpay_order_id);

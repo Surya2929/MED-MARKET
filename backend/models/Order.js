@@ -11,20 +11,25 @@ const orderSchema = new mongoose.Schema({
     }
   ],
   totalAmount: { type: Number, required: true },
+  walletUsed: { type: Number, default: 0 },
   deliveryAddress: { type: String, required: true }, 
-  prescriptionImage: { type: String }, // 🚀 BASE64 Image String
+  prescriptionImage: { type: String },
   status: { 
     type: String, 
-    // 🚀 NEW: Added Cancelled & Returned logic
     enum: ['Pending', 'Accepted', 'Packed', 'Out for Delivery', 'Delivered', 'Cancelled', 'Return Requested', 'Returned'], 
     default: 'Pending' 
   },
-  cancelReason: { type: String }, // Agar cancel/return kiya toh kyun?
-  // 🚀 NEW: Return management (Amazon-style) — customer's evidence + vendor's decision
-  returnPhotos: [{ type: String }], // base64 images of the item's condition
+  cancelReason: { type: String },
+  returnPhotos: [{ type: String }],
+  returnItems: [
+    {
+      medicineId: { type: mongoose.Schema.Types.ObjectId, ref: 'Medicine' },
+      quantity: { type: Number, required: true }
+    }
+  ],
+  requestType: { type: String, enum: ['Return', 'Refund'] },
   vendorReturnAction: { type: String, enum: ['Pending', 'Approved', 'Rejected'], default: 'Pending' },
   vendorRejectionReason: { type: String },
-  // 🚀 NEW: Payment tracking
   paymentMethod: { type: String, enum: ['COD', 'Online'], default: 'COD' },
   paymentStatus: { type: String, enum: ['Pending', 'Paid', 'Failed'], default: 'Pending' },
   razorpayOrderId: { type: String },

@@ -1,9 +1,8 @@
 import { useState, useContext } from 'react';
 import API from '../services/api';
 import { LanguageContext } from '../context/LanguageContext';
-import { X, RotateCcw, CheckCircle2, XCircle, ImageOff } from 'lucide-react';
+import { X, RotateCcw, CheckCircle2, XCircle, ImageOff, Package, Wallet } from 'lucide-react';
 
-// 🚀 Vendor's Amazon-style return review: see customer's reason + photos, Approve or Reject (with reason)
 const ReturnDecisionModal = ({ order, onClose, onDecided }) => {
   const { t } = useContext(LanguageContext);
   const [loading, setLoading] = useState(false);
@@ -11,7 +10,10 @@ const ReturnDecisionModal = ({ order, onClose, onDecided }) => {
   const [rejectReason, setRejectReason] = useState('');
 
   const handleApprove = async () => {
-    if (!window.confirm(t('approveReturn') + '?')) return;
+    const confirmMsg = order.requestType === 'Refund'
+      ? 'Approve this return? The refund amount will be credited to the customer\'s MedMarket Wallet automatically.'
+      : t('approveReturn') + '?';
+    if (!window.confirm(confirmMsg)) return;
     setLoading(true);
     try {
       await API.put(`/orders/${order._id}/return-decision`, { decision: 'Approved' });
@@ -41,6 +43,28 @@ const ReturnDecisionModal = ({ order, onClose, onDecided }) => {
         </div>
 
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
+
+          <div className={`flex items-center gap-2 p-3 rounded-lg border ${order.requestType === 'Refund' ? 'bg-emerald-50 border-emerald-200' : 'bg-blue-50 border-blue-200'}`}>
+            {order.requestType === 'Refund' ? <Wallet size={16} className="text-emerald-600"/> : <Package size={16} className="text-blue-600"/>}
+            <p className={`text-xs font-bold ${order.requestType === 'Refund' ? 'text-emerald-800' : 'text-blue-800'}`}>
+              Customer requested: {order.requestType === 'Refund' ? 'Refund to MedMarket Wallet' : 'Return Item Only (no wallet credit)'}
+            </p>
+          </div>
+
+          <div>
+            <p className="text-xs font-bold text-slate-500 uppercase mb-2 flex items-center gap-1.5"><Package size={12}/> Items Being Returned</p>
+            <div className="space-y-1.5">
+              {order.returnItems && order.returnItems.length > 0 ? order.returnItems.map((ri, idx) => (
+                <div key={idx} className="flex justify-between items-center bg-purple-50 border border-purple-100 rounded-lg px-3 py-2">
+                  <span className="text-sm font-bold text-slate-800">{ri.medicineId?.name || 'Item'}</span>
+                  <span className="text-xs font-bold text-purple-700 bg-white px-2 py-0.5 rounded border border-purple-200">Qty: {ri.quantity}</span>
+                </div>
+              )) : (
+                <p className="text-xs text-slate-400">No item details found.</p>
+              )}
+            </div>
+          </div>
+
           <div>
             <p className="text-xs font-bold text-slate-500 uppercase mb-1">{t('customerReason')}</p>
             <p className="text-sm text-slate-800 bg-slate-50 border border-slate-200 rounded-lg p-3">{order.cancelReason || '—'}</p>

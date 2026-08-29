@@ -1,18 +1,16 @@
 import Order from '../models/Order.js';
 import Store from '../models/Store.js'; 
-import Inventory from '../models/Inventory.js'; // 🚀 Added to update stock
-import Medicine from '../models/Medicine.js'; // 🚀 NEW: needed to check prescriptionRequired
+import Inventory from '../models/Inventory.js';
+import Medicine from '../models/Medicine.js';
+import User from '../models/User.js';
+import { creditWallet, debitWallet } from './walletController.js';
 
-// 🚀 NEW: basic sanity check so people can't place an order with a junk/incomplete address —
-// requires a reasonable length AND a 6-digit Indian PIN code somewhere in the text.
 export const isValidAddress = (address) => {
   if (!address || address.trim().length < 15) return false;
-  return /\b\d{6}\b/.test(address); // has a 6-digit PIN code
+  return /\b\d{6}\b/.test(address);
 };
 
-// 🚀 NEW: shared, server-trusted verification — used by both COD (placeOrder) and
-// the Razorpay flow (paymentController) so price/stock/prescription checks never diverge.
-export const verifyCartItems = async (storeId, items, deliveryAddress, prescriptionImage) => {
+export const verifyCartItems = async (storeId, items, deliveryAddress, prescriptionImage, userId = null, useWallet = false) => {
   if (!items || items.length === 0) throw { status: 400, message: 'No order items' };
   if (!storeId) throw { status: 400, message: 'Store ID is missing.' };
   if (!isValidAddress(deliveryAddress)) throw { status: 400, message: 'Please enter a complete delivery address including a valid 6-digit PIN code.' };
@@ -37,14 +35,23 @@ export const verifyCartItems = async (storeId, items, deliveryAddress, prescript
   const deliveryFee = itemTotal > 500 ? 0 : 40;
   const totalAmount = itemTotal + deliveryFee;
 
-  return { verifiedItems, totalAmount };
+  let walletUsed = 0;
+  if (useWallet && userId) {
+    const user = await User.findById(userId).select('walletBalance');
+    const balance = user?.walletBalance || 0;
+    walletUsed = Math.min(balance, totalAmount);
+  }
+  const payableAmount = totalAmount - walletUsed;
+
+  return { verifiedItems, totalAmount, walletUsed, payableAmount };
 };
 
 export const placeOrder = async (req, res) => {
   try {
-    const { storeId, items, deliveryAddress, prescriptionImage } = req.body;
-
-    const { verifiedItems, totalAmount } = await verifyCartItems(storeId, items, deliveryAddress, prescriptionImage);
+    const { storeId, items, deliveryAddress, prescriptionImage, useWallet } = req.body;
+    const { verifiedItems, totalAmount, walletUsed } = await verifyCartItems(
+      storeId, items, deliveryAddress, prescriptionImage, req.user._id, useWallet
+    );
 
     const order = await Order.create({
       customerId: req.user._id,
@@ -53,17 +60,21 @@ export const placeOrder = async (req, res) => {
       prescriptionImage: prescriptionImage || null,
       items: verifiedItems,
       totalAmount,
+      walletUsed,
       status: 'Pending',
       paymentMethod: 'COD',
       paymentStatus: 'Pending'
     });
 
-    // Stock is deducted only after every item passed the checks above
     for (const item of verifiedItems) {
       await Inventory.findOneAndUpdate(
         { storeId, medicineId: item.medicineId },
         { $inc: { stock: -item.quantity } }
       );
+    }
+
+    if (walletUsed > 0) {
+      await debitWallet(req.user._id, walletUsed, `Used on Order #${order._id.toString().slice(-6)}`, order._id);
     }
 
     res.status(201).json(order);
@@ -77,7 +88,8 @@ export const getMyOrders = async (req, res) => {
   try {
     const orders = await Order.find({ customerId: req.user._id })
       .populate('storeId', 'storeName address')
-      .populate('items.medicineId', 'name composition dosage uses') 
+      .populate('items.medicineId', 'name composition dosage uses')
+      .populate('returnItems.medicineId', 'name')
       .sort({ createdAt: -1 });
     res.status(200).json(orders);
   } catch (error) { res.status(500).json({ message: error.message }); }
@@ -91,6 +103,7 @@ export const getVendorOrders = async (req, res) => {
     const orders = await Order.find({ storeId: store._id })
       .populate('customerId', 'name phone email')
       .populate('items.medicineId', 'name composition')
+      .populate('returnItems.medicineId', 'name')
       .sort({ createdAt: -1 });
     res.status(200).json(orders);
   } catch (error) { res.status(500).json({ message: error.message }); }
@@ -98,7 +111,7 @@ export const getVendorOrders = async (req, res) => {
 
 export const updateOrderStatus = async (req, res) => {
   try {
-    const { status, cancelReason, returnPhotos } = req.body;
+    const { status, cancelReason, returnPhotos, returnItems, requestType } = req.body;
     const order = await Order.findById(req.params.id);
     if (!order) return res.status(404).json({ message: 'Order not found' });
 
@@ -114,18 +127,41 @@ export const updateOrderStatus = async (req, res) => {
         order.status = 'Cancelled';
         order.cancelReason = cancelReason;
 
-        // 🚀 NEW: RESTORE STOCK IF ORDER IS CANCELLED
         for (const item of order.items) {
           await Inventory.findOneAndUpdate(
             { storeId: order.storeId, medicineId: item.medicineId },
             { $inc: { stock: item.quantity } } 
           );
         }
+
+        if (order.walletUsed > 0) {
+          await creditWallet(req.user._id, order.walletUsed, `Refund for cancelled Order #${order._id.toString().slice(-6)}`, order._id);
+        }
       } else if (status === 'Return Requested' && order.status === 'Delivered') {
+        if (!Array.isArray(returnItems) || returnItems.length === 0) {
+          return res.status(400).json({ message: 'Please select at least one item to return.' });
+        }
+        if (!requestType || !['Return', 'Refund'].includes(requestType)) {
+          return res.status(400).json({ message: "Please specify whether this is a 'Return' or a 'Refund' request." });
+        }
+
+        const validatedReturnItems = [];
+        for (const reqItem of returnItems) {
+          const orderedItem = order.items.find(i => i.medicineId.toString() === reqItem.medicineId);
+          if (!orderedItem) return res.status(400).json({ message: 'One of the selected items was not part of this order.' });
+          const qty = Number(reqItem.quantity);
+          if (!qty || qty < 1 || qty > orderedItem.quantity) {
+            return res.status(400).json({ message: `Return quantity for an item must be between 1 and ${orderedItem.quantity}.` });
+          }
+          validatedReturnItems.push({ medicineId: reqItem.medicineId, quantity: qty });
+        }
+
         order.status = 'Return Requested';
         order.cancelReason = cancelReason;
-        order.returnPhotos = Array.isArray(returnPhotos) ? returnPhotos.slice(0, 5) : []; // 🚀 NEW: up to 5 evidence photos
-        order.vendorReturnAction = 'Pending'; // 🚀 reset — fresh request awaiting vendor decision
+        order.returnPhotos = Array.isArray(returnPhotos) ? returnPhotos.slice(0, 5) : [];
+        order.returnItems = validatedReturnItems;
+        order.requestType = requestType;
+        order.vendorReturnAction = 'Pending';
         order.vendorRejectionReason = undefined;
       } else {
         return res.status(400).json({ message: 'Order cannot be cancelled/returned at this stage' });
@@ -137,13 +173,10 @@ export const updateOrderStatus = async (req, res) => {
   } catch (error) { res.status(500).json({ message: error.message }); }
 };
 
-// 🚀 NEW: Vendor approves or rejects a customer's return request — mirrors a typical
-// e-commerce return workflow (Amazon-style): approve restocks the item, reject sends it
-// back to "Delivered" with the vendor's reason visible to the customer.
 export const handleReturnDecision = async (req, res) => {
   try {
-    const { decision, vendorRejectionReason } = req.body; // decision: 'Approved' | 'Rejected'
-    const order = await Order.findById(req.params.id);
+    const { decision, vendorRejectionReason } = req.body;
+    const order = await Order.findById(req.params.id).populate('items.medicineId', 'name');
     if (!order) return res.status(404).json({ message: 'Order not found' });
 
     const store = await Store.findOne({ vendorId: req.user._id });
@@ -153,16 +186,32 @@ export const handleReturnDecision = async (req, res) => {
     if (decision === 'Approved') {
       order.status = 'Returned';
       order.vendorReturnAction = 'Approved';
-      // 🚀 item is coming back to the shelf — restore stock
-      for (const item of order.items) {
+
+      for (const item of order.returnItems) {
         await Inventory.findOneAndUpdate(
           { storeId: order.storeId, medicineId: item.medicineId },
           { $inc: { stock: item.quantity } }
         );
       }
+
+      if (order.requestType === 'Refund') {
+        let refundAmount = 0;
+        for (const returnedItem of order.returnItems) {
+          const originalItem = order.items.find(i => i.medicineId._id.toString() === returnedItem.medicineId.toString());
+          if (originalItem) refundAmount += originalItem.price * returnedItem.quantity;
+        }
+        if (refundAmount > 0) {
+          await creditWallet(
+            order.customerId,
+            refundAmount,
+            `Refund for returned item(s) from Order #${order._id.toString().slice(-6)}`,
+            order._id
+          );
+        }
+      }
     } else if (decision === 'Rejected') {
       if (!vendorRejectionReason || !vendorRejectionReason.trim()) return res.status(400).json({ message: 'Please provide a reason for rejecting the return.' });
-      order.status = 'Delivered'; // 🚀 revert — order stands as delivered, no return happening
+      order.status = 'Delivered';
       order.vendorReturnAction = 'Rejected';
       order.vendorRejectionReason = vendorRejectionReason.trim();
     } else {

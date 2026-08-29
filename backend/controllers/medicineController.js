@@ -3,7 +3,6 @@ import Inventory from '../models/Inventory.js';
 import Store from '../models/Store.js';
 import Groq from 'groq-sdk';
 
-// 🚀 UPDATED: addMasterMedicine with New Fields (Startup Grade)
 export const addMasterMedicine = async (req, res) => {
   try {
     const { 
@@ -91,7 +90,10 @@ export const deleteVendorInventory = async (req, res) => {
   }
 };
 
-// 🚀 SEARCH & COMPARE WITH GROQ AI FALLBACK
+// 🚀 SEARCH & COMPARE
+// 🚀 FIX: AI auto-create-medicine block REMOVED. Previously, an unmatched search would let
+// Groq AI verify and PERMANENTLY save a new Medicine document — even with zero vendor
+// involvement. Now an unmatched search simply returns "No medicines found."
 export const searchAndCompare = async (req, res) => {
   try {
     let { q: searchQuery, city } = req.query; 
@@ -106,46 +108,6 @@ export const searchAndCompare = async (req, res) => {
       ]
     });
 
-    if (exactMedicines.length === 0 && process.env.GROQ_API_KEY) {
-      try {
-        const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-        const aiPrompt = `You are a medical API. The user searched for "${searchQuery}". 
-        Check if this is a valid medicine. Return ONLY a raw JSON object. No markdown.
-        Format: {"isValid": true, "name": "Exact Brand Name", "composition": "Key Ingredients", "uses": "Main uses", "sideEffects": "None", "dosage": "General dose"}
-        If invalid, return: {"isValid": false}`;
-
-        const chatCompletion = await groq.chat.completions.create({
-          messages: [{ role: 'system', content: aiPrompt }],
-          model: 'openai/gpt-oss-120b', // 🚀 UPGRADED: much more capable model (the old llama-3.1-8b-instant was deprecated by Groq)
-          temperature: 0.1,
-        });
-
-        let aiResponse = chatCompletion.choices[0]?.message?.content || "";
-        const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
-        
-        if (jsonMatch) {
-          const medData = JSON.parse(jsonMatch[0]);
-
-          if (medData.isValid === true) {
-             const safeName = medData.name || searchQuery;
-             let newMed = await Medicine.findOne({ name: { $regex: new RegExp(`^${safeName}$`, 'i') } });
-            
-             if (!newMed) {
-               newMed = await Medicine.create({
-                 name: safeName, 
-                 composition: medData.composition || "General Composition", 
-                 uses: medData.uses || "Medical use", 
-                 sideEffects: medData.sideEffects || "None", 
-                 dosage: medData.dosage || "As directed by physician",
-                 defaultPrice: Math.floor(Math.random() * 100) + 20
-               });
-             }
-             exactMedicines.push(newMed);
-          }
-        }
-      } catch (aiError) { console.error("❌ AI Error:", aiError); }
-    }
-
     if (exactMedicines.length === 0) return res.status(404).json({ message: 'No medicines found' });
 
     const exactMedicineIds = exactMedicines.map(med => med._id);
@@ -158,12 +120,10 @@ export const searchAndCompare = async (req, res) => {
     
     const allMedicineIds = [...exactMedicineIds, ...alternativeMedicines.map(m => m._id)];
 
-    // 🚀 nested-populate vendor block status so suspended vendors' medicines never show to customers
     let inventoryResults = await Inventory.find({ medicineId: { $in: allMedicineIds } })
       .populate('medicineId')
       .populate({ path: 'storeId', select: 'storeName address isVerified storeType vendorId', populate: { path: 'vendorId', select: 'isBlocked' } });
 
-    // 🚀 City filter: local stores are filtered by city, online stores always show regardless of city
     if (city && city !== 'All Cities' && city !== 'Select Location') {
        let cityKeyword = city.split(',').pop().trim().toLowerCase().replace('district', '').trim();
        inventoryResults = inventoryResults.filter(inv => {
@@ -173,6 +133,7 @@ export const searchAndCompare = async (req, res) => {
        });
     }
 
+    // 🚀 Sort ascending by price — this is what makes the cheapest store appear first in each tab
     inventoryResults.sort((a, b) => a.price - b.price);
 
     const formatResults = (medicinesList) => {
@@ -180,8 +141,8 @@ export const searchAndCompare = async (req, res) => {
         const availableStores = inventoryResults.filter(
           inv => inv.medicineId && inv.medicineId._id.toString() === med._id.toString() && inv.stock > 0 
             && inv.storeId?.isVerified === true
-            && !inv.isBlocked // admin-blocked listing hidden from customers
-            && !inv.storeId?.vendorId?.isBlocked // a suspended vendor's medicines no longer show up
+            && !inv.isBlocked
+            && !inv.storeId?.vendorId?.isBlocked
         );
 
         return {
@@ -237,13 +198,12 @@ export const getSuggestions = async (req, res) => {
   }
 };
 
-// 🚀 Translate a batch of medicine text fields (name/composition/uses etc.) to Hindi via Groq
 export const translateTexts = async (req, res) => {
   try {
     const { texts } = req.body;
     if (!Array.isArray(texts) || texts.length === 0) return res.status(400).json({ message: 'texts array is required' });
     if (texts.length > 100) return res.status(400).json({ message: 'Too many texts in one request (max 100).' });
-    if (!process.env.GROQ_API_KEY) return res.status(200).json({ translations: texts }); // graceful fallback: return originals
+    if (!process.env.GROQ_API_KEY) return res.status(200).json({ translations: texts });
 
     const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
     const prompt = `Translate each of the following medical/pharmacy related phrases into simple, natural Hindi (Devanagari script). Keep medicine brand names in Roman script if there's no common Hindi equivalent, but translate generic descriptive text fully.
@@ -253,13 +213,13 @@ Input: ${JSON.stringify(texts)}`;
 
     const chatCompletion = await groq.chat.completions.create({
       messages: [{ role: 'system', content: prompt }],
-      model: 'openai/gpt-oss-120b', // 🚀 UPGRADED: much more capable model (the old llama-3.1-8b-instant was deprecated by Groq)
+      model: 'openai/gpt-oss-120b',
       temperature: 0.1,
     });
 
     let aiResponse = chatCompletion.choices[0]?.message?.content || "";
     const jsonMatch = aiResponse.match(/\[[\s\S]*\]/);
-    if (!jsonMatch) return res.status(200).json({ translations: texts }); // fallback to originals
+    if (!jsonMatch) return res.status(200).json({ translations: texts });
 
     let translations = JSON.parse(jsonMatch[0]);
     if (!Array.isArray(translations) || translations.length !== texts.length) return res.status(200).json({ translations: texts });
@@ -267,6 +227,6 @@ Input: ${JSON.stringify(texts)}`;
     res.status(200).json({ translations });
   } catch (error) {
     console.error('Translation error:', error.message);
-    res.status(200).json({ translations: req.body.texts || [] }); // never hard-fail the page over a translation error
+    res.status(200).json({ translations: req.body.texts || [] });
   }
 };

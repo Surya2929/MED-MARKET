@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { CartContext } from '../context/CartContext';
 import { LanguageContext } from '../context/LanguageContext';
-import { Pill, Search, Stethoscope, LogOut, Store, ShoppingCart, User, Languages, ShieldAlert, Package, MessageSquare, Menu, X } from 'lucide-react';
+import { Pill, Search, Stethoscope, LogOut, Store, ShoppingCart, User, Languages, ShieldAlert, Package, MessageSquare, Menu, X, Wallet } from 'lucide-react';
 
 const Navbar = () => {
   const { user, logout } = useContext(AuthContext);
@@ -24,7 +24,6 @@ const Navbar = () => {
           <span className="text-slate-900 font-bold text-xl tracking-tight">MedMarket<span className="text-blue-600">.</span></span>
         </Link>
 
-        {/* 🚀 DESKTOP NAV — hidden on mobile, everything in one row like before */}
         <div className="hidden md:flex items-center gap-5 text-slate-600 font-medium text-sm">
 
           <button onClick={() => setLanguage(language === 'English' ? 'Hindi' : 'English')} className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors font-bold border border-slate-300">
@@ -45,10 +44,15 @@ const Navbar = () => {
             <div className="flex items-center gap-4 border-l pl-5 border-slate-200 ml-2">
 
               {user.role === 'customer' && (
-                <Link to="/myorders" className="flex items-center gap-1.5 text-slate-700 hover:text-emerald-600 transition-colors bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
-                   <Package className="w-4 h-4 text-emerald-500" />
-                   <span className="font-bold">{t('myOrdersNav')}</span>
-                </Link>
+                <>
+                  <Link to="/myorders" className="flex items-center gap-1.5 text-slate-700 hover:text-emerald-600 transition-colors bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
+                     <Package className="w-4 h-4 text-emerald-500" />
+                     <span className="font-bold">{t('myOrdersNav')}</span>
+                  </Link>
+                  <Link to="/wallet" className="flex items-center gap-1.5 text-slate-700 hover:text-emerald-600 transition-colors" title="Wallet">
+                     <Wallet className="w-4 h-4 text-emerald-500" />
+                  </Link>
+                </>
               )}
 
               {(user.role === 'customer' || user.role === 'vendor') && (
@@ -82,7 +86,6 @@ const Navbar = () => {
           )}
         </div>
 
-        {/* 🚀 MOBILE: only Cart + Hamburger visible, everything else moves into the dropdown */}
         <div className="flex md:hidden items-center gap-3">
           {user?.role !== 'admin' && (
             <Link to="/cart" className="relative text-slate-600" onClick={close}>
@@ -96,7 +99,6 @@ const Navbar = () => {
         </div>
       </div>
 
-      {/* 🚀 MOBILE DROPDOWN PANEL — stacked vertically, never causes horizontal overflow */}
       {mobileOpen && (
         <div className="md:hidden border-t border-slate-200 bg-white px-4 py-4 space-y-1 max-h-[calc(100vh-4rem)] overflow-y-auto">
 
@@ -110,7 +112,10 @@ const Navbar = () => {
           {user ? (
             <>
               {user.role === 'customer' && (
-                <button onClick={() => go('/myorders')} className="w-full flex items-center gap-2 px-3 py-3 text-slate-700 font-medium text-sm border-b border-slate-100"><Package className="w-4 h-4 text-emerald-500" /> {t('myOrdersNav')}</button>
+                <>
+                  <button onClick={() => go('/myorders')} className="w-full flex items-center gap-2 px-3 py-3 text-slate-700 font-medium text-sm border-b border-slate-100"><Package className="w-4 h-4 text-emerald-500" /> {t('myOrdersNav')}</button>
+                  <button onClick={() => go('/wallet')} className="w-full flex items-center gap-2 px-3 py-3 text-slate-700 font-medium text-sm border-b border-slate-100"><Wallet className="w-4 h-4 text-emerald-500" /> MedMarket Wallet</button>
+                </>
               )}
               {(user.role === 'customer' || user.role === 'vendor') && (
                 <button onClick={() => go('/complaints')} className="w-full flex items-center gap-2 px-3 py-3 text-slate-700 font-medium text-sm border-b border-slate-100"><MessageSquare className="w-4 h-4" /> {t('myComplaintsNav')}</button>
