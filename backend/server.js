@@ -1,3 +1,6 @@
+import dns from 'node:dns';
+dns.setServers(['8.8.8.8', '8.8.4.4']);
+console.log('✅ Google DNS configured');
 import express from 'express';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';

@@ -37,17 +37,6 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const otpLogin = async (phone, otp) => {
-    try {
-      const { data } = await API.post('/auth/verify-otp', { phone, otp });
-      setUser(data);
-      localStorage.setItem('userInfo', JSON.stringify(data));
-      return { success: true };
-    } catch (error) {
-      return { success: false, message: error.response?.data?.message || 'Invalid OTP' };
-    }
-  };
-
   const googleLogin = async (credential) => {
     try {
       const { data } = await API.post('/auth/google', { credential });
@@ -80,12 +69,12 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     setUser(null);
     localStorage.removeItem('userInfo');
-    localStorage.removeItem('medCart'); 
-    window.location.href = '/login'; 
+    localStorage.removeItem('medCart');
+    window.location.href = '/login';
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, otpLogin, googleLogin, sendResetOtp, resetPassword, logout, checkingSession }}>
+    <AuthContext.Provider value={{ user, login, googleLogin, sendResetOtp, resetPassword, logout, checkingSession }}>
       {children}
     </AuthContext.Provider>
   );
