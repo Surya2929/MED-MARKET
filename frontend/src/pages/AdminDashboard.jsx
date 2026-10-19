@@ -126,7 +126,7 @@ const AdminDashboard = () => {
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl shadow-2xl p-6 md:p-8 w-full max-w-3xl max-h-[85vh] flex flex-col animate-fade-in">
             <div className="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
-              <h3 className="text-2xl font-black text-slate-800 flex items-center gap-2"><Package className="w-6 h-6 text-blue-600" /> {modalStoreName}'s Live Inventory</h3>
+              <h3 className="text-2xl font-black text-slate-800 flex items-center gap-2"><Package className="w-6 h-6 text-brand-600" /> {modalStoreName}'s Live Inventory</h3>
               <button onClick={() => setInventoryModalOpen(false)} className="bg-slate-100 hover:bg-rose-100 text-slate-500 hover:text-rose-600 p-2 rounded-full transition-colors"><X className="w-5 h-5" /></button>
             </div>
             <div className="flex-1 overflow-y-auto custom-scrollbar pr-2">
@@ -169,15 +169,15 @@ const AdminDashboard = () => {
       )}
 
       {/* 🚀 ADMIN HEADER */}
-      <div className="bg-slate-900 pt-10 pb-20 relative overflow-hidden">
+      <div className="bg-brand-700 pt-10 pb-20 relative overflow-hidden rounded-b-[28px]">
         <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1551076805-e18690c5e53b?q=80&w=2000&auto=format&fit=crop')] bg-cover bg-center opacity-5 mix-blend-luminosity"></div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative z-10">
           <div className="flex items-center gap-4">
             <div className="bg-rose-500 p-3.5 rounded-2xl shadow-lg"><ShieldAlert className="w-8 h-8 text-white" /></div>
             <div><h1 className="text-3xl font-black text-white tracking-tight">Command Center</h1></div>
           </div>
-          <div className="bg-slate-800/50 backdrop-blur-md border border-slate-700 px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-bold text-slate-300">
-            <Clock className="w-4 h-4 text-emerald-400" /> Live Data Sync Active
+          <div className="bg-brand-800/60 backdrop-blur-md border border-brand-600 px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-bold text-brand-100">
+            <Clock className="w-4 h-4 text-lime-accent" /> Live Data Sync Active
           </div>
         </div>
       </div>
@@ -215,13 +215,13 @@ const AdminDashboard = () => {
                           <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
                             <p className="font-bold text-slate-800 text-[14px] flex items-center gap-1.5 mb-1.5">{v.store.storeName}{v.store.isVerified && <CheckCircle2 className="w-4 h-4 text-emerald-500" title="Verified"/>}</p>
                             <p className="text-xs text-slate-500 flex items-start gap-1 mb-2"><MapPin className="w-3.5 h-3.5 mt-0.5 shrink-0 text-slate-400"/> {v.store.address || 'Address not provided'}</p>
-                            <div className="inline-flex items-center gap-1.5 bg-white border border-slate-200 px-2 py-1 rounded-md"><FileText className="w-3 h-3 text-blue-500" /><span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">DL: <span className="text-slate-900">{v.store.licenseNumber || 'Not Provided'}</span></span></div>
+                            <div className="inline-flex items-center gap-1.5 bg-white border border-slate-200 px-2 py-1 rounded-md"><FileText className="w-3 h-3 text-brand-500" /><span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">DL: <span className="text-slate-900">{v.store.licenseNumber || 'Not Provided'}</span></span></div>
                           </div>
                         ) : (<div className="text-xs font-bold text-rose-500 bg-rose-50 px-3 py-2 rounded-lg border border-rose-100 inline-flex items-center gap-1.5"><AlertTriangle className="w-4 h-4" /> Store Setup Incomplete</div>)}
                       </td>
                       <td className="p-5 text-center">
                         {v?.store ? (
-                          <button onClick={() => handleViewInventory(v.store._id, v.store.storeName)} className="bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 border border-blue-200 shadow-sm mx-auto"><Package className="w-4 h-4" /> View Stock</button>
+                          <button onClick={() => handleViewInventory(v.store._id, v.store.storeName)} className="bg-brand-50 hover:bg-brand-100 text-brand-700 px-3 py-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 border border-brand-100 shadow-sm mx-auto"><Package className="w-4 h-4" /> View Stock</button>
                         ) : (<span className="text-slate-400 text-xs">-</span>)}
                       </td>
                       <td className="p-5 text-right">
@@ -260,7 +260,7 @@ const AdminDashboard = () => {
               <div className="flex items-center gap-2">
                 <ArrowUpDown className="w-4 h-4 text-slate-400"/>
                 <label className="text-xs font-bold text-slate-600">Sort by:</label>
-                <select value={customerSort} onChange={e => setCustomerSort(e.target.value)} className="text-xs font-bold border border-slate-300 rounded-md px-2 py-1.5 outline-none focus:border-blue-500 bg-white">
+                <select value={customerSort} onChange={e => setCustomerSort(e.target.value)} className="text-xs font-bold border border-slate-300 rounded-md px-2 py-1.5 outline-none focus:border-brand-500 bg-white">
                   <option value="none">Default</option>
                   <option value="orders">Most Orders Placed</option>
                   <option value="returns">Most Returns</option>
@@ -290,10 +290,10 @@ const AdminDashboard = () => {
                   ) : filteredCustomers.map(c => (
                     <tr key={c._id} className="hover:bg-slate-50 transition-colors">
                       <td className="p-5 font-bold text-slate-900 text-base flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-black text-sm border border-blue-200">{c?.name?.charAt(0) || '?'}</div>{c?.name || 'Unknown'}
+                        <div className="w-9 h-9 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center font-black text-sm border border-brand-100">{c?.name?.charAt(0) || '?'}</div>{c?.name || 'Unknown'}
                       </td>
                       <td className="p-5"><p className="font-bold text-slate-700 flex items-center gap-1.5"><Mail className="w-3.5 h-3.5 text-slate-400"/> {c?.email || 'N/A'}</p><p className="text-xs text-slate-500 mt-1 flex items-center gap-1.5"><Phone className="w-3.5 h-3.5 text-slate-400"/> {c?.phone || 'N/A'}</p></td>
-                      <td className="p-5 text-center"><span className="bg-blue-50 text-blue-700 px-2.5 py-1 rounded-md font-bold text-xs">{c.totalOrders || 0}</span></td>
+                      <td className="p-5 text-center"><span className="bg-brand-50 text-brand-700 px-2.5 py-1 rounded-md font-bold text-xs">{c.totalOrders || 0}</span></td>
                       <td className="p-5 text-center">
                         {c.totalReturns > 0 ? <span className="bg-amber-50 text-amber-700 px-2.5 py-1 rounded-md font-bold text-xs">{c.totalReturns}</span> : <span className="text-slate-300 text-xs">0</span>}
                       </td>
@@ -324,11 +324,11 @@ const AdminDashboard = () => {
                   {reportsList.map(r => (
                     <tr key={r._id} className="hover:bg-slate-50">
                       <td className="p-5 font-bold text-slate-900 text-xs">
-                        <span className={`px-2 py-0.5 rounded text-[10px] uppercase tracking-widest block w-fit mb-1 ${r.reportedBy?.role === 'customer' ? 'bg-blue-100 text-blue-700' : 'bg-teal-100 text-teal-700'}`}>{r.reportedBy?.role}</span>
+                        <span className={`px-2 py-0.5 rounded text-[10px] uppercase tracking-widest block w-fit mb-1 ${r.reportedBy?.role === 'customer' ? 'bg-brand-100 text-brand-700' : 'bg-teal-100 text-teal-700'}`}>{r.reportedBy?.role}</span>
                         {r.reportedBy?.name} <br/><span className="font-normal text-slate-500">{r.reportedBy?.phone}</span>
                       </td>
                       <td className="p-5 font-bold text-slate-900 text-xs">
-                        {r.reportedStore ? <span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded">Store: {r.reportedStore.storeName}</span> : <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded">User: {r.reportedUser?.name}</span>}
+                        {r.reportedStore ? <span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded">Store: {r.reportedStore.storeName}</span> : <span className="bg-brand-100 text-brand-800 px-2 py-0.5 rounded">User: {r.reportedUser?.name}</span>}
                       </td>
                       <td className="p-5">
                         <p className="font-bold text-rose-600 text-sm mb-1">{r.reason}</p>

@@ -43,7 +43,7 @@ const MyOrders = () => {
   const getStatusUI = (status) => {
     switch(status) {
       case 'Pending': return { color: 'bg-slate-100 text-slate-600 border-slate-200', icon: <Clock className="w-4 h-4"/>, text: t('statusPending') };
-      case 'Accepted': return { color: 'bg-blue-100 text-blue-700 border-blue-200', icon: <StoreIcon className="w-4 h-4"/>, text: t('statusAccepted') };
+      case 'Accepted': return { color: 'bg-brand-100 text-brand-700 border-brand-100', icon: <StoreIcon className="w-4 h-4"/>, text: t('statusAccepted') };
       case 'Packed': return { color: 'bg-amber-100 text-amber-700 border-amber-200', icon: <Package className="w-4 h-4"/>, text: t('statusPacked') };
       case 'Out for Delivery': return { color: 'bg-indigo-100 text-indigo-700 border-indigo-200', icon: <Truck className="w-4 h-4 animate-pulse"/>, text: t('statusOutForDelivery') };
       case 'Delivered': return { color: 'bg-emerald-100 text-emerald-700 border-emerald-200', icon: <CheckCircle2 className="w-4 h-4"/>, text: t('statusDelivered') };
@@ -56,11 +56,11 @@ const MyOrders = () => {
 
   return (
     <div className="bg-slate-50 min-h-screen pb-16 font-sans">
-      <div className="bg-slate-900 py-10"><div className="max-w-4xl mx-auto px-4"><h1 className="text-3xl font-black text-white flex items-center gap-3"><Package className="w-8 h-8 text-blue-400" /> {t('myOrdersTitle')}</h1></div></div>
+      <div className="px-3 sm:px-6 lg:px-8 pt-4"><div className="max-w-7xl mx-auto bg-brand-700 rounded-[28px] py-10"><div className="max-w-4xl mx-auto px-4"><h1 className="text-3xl font-black text-white flex items-center gap-3"><Package className="w-8 h-8 text-lime-accent" /> {t('myOrdersTitle')}</h1></div></div></div>
 
       <div className="max-w-4xl mx-auto px-4 py-8">
         {orders.length === 0 ? (
-          <div className="bg-white p-12 rounded-[2rem] shadow-sm text-center"><ShoppingBag className="w-16 h-16 text-slate-300 mx-auto mb-4" /><h2 className="text-2xl font-black text-slate-800 mb-2">{t('noOrders')}</h2><Link to="/search" className="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold inline-block">{t('orderNow')}</Link></div>
+          <div className="bg-white p-12 rounded-[2rem] shadow-sm text-center"><ShoppingBag className="w-16 h-16 text-slate-300 mx-auto mb-4" /><h2 className="text-2xl font-black text-slate-800 mb-2">{t('noOrders')}</h2><Link to="/search" className="bg-brand-600 text-white px-8 py-3 rounded-xl font-bold inline-block">{t('orderNow')}</Link></div>
         ) : (
           <div className="space-y-6">
             {orders.map((order) => {
@@ -75,7 +75,7 @@ const MyOrders = () => {
                   <div className="p-6 border-b border-slate-100 flex justify-between items-start">
                     <div>
                       <h4 className="text-xs font-black text-slate-400 uppercase mb-2">{t('pharmacyInfo')}</h4>
-                      <p className="font-bold text-slate-800 text-sm flex items-center gap-2"><StoreIcon className="w-4 h-4 text-blue-600" /> {order.storeId?.storeName}</p>
+                      <p className="font-bold text-slate-800 text-sm flex items-center gap-2"><StoreIcon className="w-4 h-4 text-brand-600" /> {order.storeId?.storeName}</p>
                     </div>
                     {/* 🚀 CANCEL / RETURN / REPORT BUTTONS */}
                     <div className="flex gap-2">

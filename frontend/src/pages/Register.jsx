@@ -57,17 +57,17 @@ const Register = () => {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="flex p-1 bg-slate-300 rounded-xl mb-6">
-              <button type="button" onClick={() => setRole('customer')} className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-bold rounded-lg transition-all ${role === 'customer' ? 'bg-slate-100 text-blue-700 shadow-sm' : 'text-slate-600 hover:text-slate-800'}`}><User className="w-5 h-5" /> {t('iAmCustomer')}</button>
+              <button type="button" onClick={() => setRole('customer')} className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-bold rounded-lg transition-all ${role === 'customer' ? 'bg-slate-100 text-brand-700 shadow-sm' : 'text-slate-600 hover:text-slate-800'}`}><User className="w-5 h-5" /> {t('iAmCustomer')}</button>
               <button type="button" onClick={() => setRole('vendor')} className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-bold rounded-lg transition-all ${role === 'vendor' ? 'bg-slate-100 text-teal-700 shadow-sm' : 'text-slate-600 hover:text-slate-800'}`}><Store className="w-5 h-5" /> {t('iAmPharmacy')}</button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div className="relative"><UserCircle className="absolute left-4 top-3.5 w-5 h-5 text-slate-500" /><input type="text" required value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder={t('fullName')} className="w-full pl-12 pr-4 py-3.5 bg-slate-200 border border-slate-300 rounded-xl text-slate-900 outline-none focus:border-blue-500" /></div>
-              <div className="relative"><Phone className="absolute left-4 top-3.5 w-5 h-5 text-slate-500" /><input type="tel" required value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })} placeholder="9876543210" className="w-full pl-[3.5rem] pr-4 py-3.5 bg-slate-200 border border-slate-300 rounded-xl text-slate-900 outline-none focus:border-blue-500" /></div>
+              <div className="relative"><UserCircle className="absolute left-4 top-3.5 w-5 h-5 text-slate-500" /><input type="text" required value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder={t('fullName')} className="w-full pl-12 pr-4 py-3.5 bg-slate-200 border border-slate-300 rounded-xl text-slate-900 outline-none focus:border-brand-500" /></div>
+              <div className="relative"><Phone className="absolute left-4 top-3.5 w-5 h-5 text-slate-500" /><input type="tel" required value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })} placeholder="9876543210" className="w-full pl-[3.5rem] pr-4 py-3.5 bg-slate-200 border border-slate-300 rounded-xl text-slate-900 outline-none focus:border-brand-500" /></div>
             </div>
 
-            <div className="relative"><Mail className="absolute left-4 top-3.5 w-5 h-5 text-slate-500" /><input type="email" required value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder={t('emailAddressPlaceholder')} className="w-full pl-12 pr-4 py-3.5 bg-slate-200 border border-slate-300 rounded-xl text-slate-900 outline-none focus:border-blue-500" /></div>
-            <div className="relative"><Lock className="absolute left-4 top-3.5 w-5 h-5 text-slate-500" /><input type={showPassword ? "text" : "password"} required minLength={6} value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} placeholder={t('createPassword')} className="w-full pl-12 pr-12 py-3.5 bg-slate-200 border border-slate-300 rounded-xl text-slate-900 outline-none focus:border-blue-500" /><button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-500 hover:text-slate-700">{showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}</button></div>
+            <div className="relative"><Mail className="absolute left-4 top-3.5 w-5 h-5 text-slate-500" /><input type="email" required value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder={t('emailAddressPlaceholder')} className="w-full pl-12 pr-4 py-3.5 bg-slate-200 border border-slate-300 rounded-xl text-slate-900 outline-none focus:border-brand-500" /></div>
+            <div className="relative"><Lock className="absolute left-4 top-3.5 w-5 h-5 text-slate-500" /><input type={showPassword ? "text" : "password"} required minLength={6} value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} placeholder={t('createPassword')} className="w-full pl-12 pr-12 py-3.5 bg-slate-200 border border-slate-300 rounded-xl text-slate-900 outline-none focus:border-brand-500" /><button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-500 hover:text-slate-700">{showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}</button></div>
 
             {role === 'vendor' && (
               <div className="mt-6 p-6 bg-teal-100/50 border border-teal-200 rounded-2xl space-y-4">
@@ -91,13 +91,13 @@ const Register = () => {
               </div>
             )}
 
-            <button type="submit" disabled={loading} className={`w-full text-slate-100 mt-6 py-4 rounded-xl font-bold text-lg flex justify-center items-center gap-2 transition-all shadow-md hover:shadow-lg ${role === 'vendor' ? 'bg-teal-700 hover:bg-teal-800' : 'bg-blue-700 hover:bg-blue-800'}`}>
+            <button type="submit" disabled={loading} className={`w-full text-slate-100 mt-6 py-4 rounded-xl font-bold text-lg flex justify-center items-center gap-2 transition-all shadow-md hover:shadow-lg ${role === 'vendor' ? 'bg-teal-700 hover:bg-teal-800' : 'bg-brand-700 hover:bg-brand-800'}`}>
               <UserPlus className="w-6 h-6" /> {loading ? t('creatingAccount') : t('createAccountBtn')}
             </button>
           </form>
 
           <p className="text-center text-slate-600 text-lg mt-8 border-t border-slate-300 pt-6">
-            {t('alreadyHaveAccount')} <Link to="/login" className="font-bold text-blue-700 hover:underline">{t('signIn')}</Link>
+            {t('alreadyHaveAccount')} <Link to="/login" className="font-bold text-brand-700 hover:underline">{t('signIn')}</Link>
           </p>
         </div>
       </div>

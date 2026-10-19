@@ -79,24 +79,24 @@ const ChatbotPage = () => {
       <div className="w-full max-w-4xl bg-white rounded-xl shadow-lg border border-slate-200 flex flex-col h-full overflow-hidden">
         
         {/* HEADER */}
-        <div className="bg-slate-900 px-6 py-4 flex items-center justify-between text-white border-b border-slate-800 shrink-0">
+        <div className="bg-brand-700 px-6 py-4 flex items-center justify-between text-white border-b border-brand-800 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-slate-800 rounded-md flex items-center justify-center border border-slate-700">
-              <Stethoscope className="w-5 h-5 text-emerald-400" />
+            <div className="w-10 h-10 bg-brand-800 rounded-md flex items-center justify-center border border-brand-600">
+              <Stethoscope className="w-5 h-5 text-lime-accent" />
             </div>
             <div>
-              <h1 className="text-base font-bold flex items-center gap-2">{t('aiConsultationTitle')} <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></span></h1>
-              <p className="text-xs text-slate-400">{t('autoDetectLangs')}</p>
+              <h1 className="text-base font-bold flex items-center gap-2">{t('aiConsultationTitle')} <span className="w-2 h-2 bg-lime-accent rounded-full animate-pulse"></span></h1>
+              <p className="text-xs text-brand-100">{t('autoDetectLangs')}</p>
             </div>
           </div>
         </div>
 
         {/* TAB SWITCHER */}
         <div className="flex bg-slate-50 border-b border-slate-200 shrink-0">
-          <button onClick={() => setActiveTab('chat')} className={`flex-1 py-3 text-sm font-semibold flex justify-center items-center gap-2 transition-all ${activeTab === 'chat' ? 'text-slate-900 border-b-2 border-slate-900 bg-white' : 'text-slate-500 hover:bg-slate-100'}`}>
+          <button onClick={() => setActiveTab('chat')} className={`flex-1 py-3 text-sm font-semibold flex justify-center items-center gap-2 transition-all ${activeTab === 'chat' ? 'text-slate-900 border-b-2 border-brand-800 bg-white' : 'text-slate-500 hover:bg-slate-100'}`}>
             <Activity className="w-4 h-4" /> {t('symptomCheck')}
           </button>
-          <button onClick={() => setActiveTab('interaction')} className={`flex-1 py-3 text-sm font-semibold flex justify-center items-center gap-2 transition-all ${activeTab === 'interaction' ? 'text-slate-900 border-b-2 border-slate-900 bg-white' : 'text-slate-500 hover:bg-slate-100'}`}>
+          <button onClick={() => setActiveTab('interaction')} className={`flex-1 py-3 text-sm font-semibold flex justify-center items-center gap-2 transition-all ${activeTab === 'interaction' ? 'text-slate-900 border-b-2 border-brand-800 bg-white' : 'text-slate-500 hover:bg-slate-100'}`}>
             <ShieldAlert className="w-4 h-4" /> {t('drugInteraction')}
           </button>
         </div>
@@ -105,7 +105,7 @@ const ChatbotPage = () => {
         <div className="flex-1 p-6 overflow-y-auto bg-white flex flex-col gap-6 custom-scrollbar relative">
           {messages.map((msg, index) => (
             <div key={index} className={`flex w-full ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[85%] md:max-w-[70%] p-4 text-sm leading-relaxed relative whitespace-pre-wrap ${msg.role === 'user' ? 'bg-slate-900 text-white rounded-lg rounded-tr-none' : 'bg-slate-50 text-slate-800 rounded-lg rounded-tl-none border border-slate-200'}`}>
+              <div className={`max-w-[85%] md:max-w-[70%] p-4 text-sm leading-relaxed relative whitespace-pre-wrap ${msg.role === 'user' ? 'bg-brand-700 text-white rounded-lg rounded-tr-none' : 'bg-slate-50 text-slate-800 rounded-lg rounded-tl-none border border-slate-200'}`}>
                 {msg.text}
               </div>
             </div>
@@ -136,7 +136,7 @@ const ChatbotPage = () => {
                 {isRecording ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
               </button>
               <input type="text" value={input} onChange={(e) => setInput(e.target.value)} placeholder={t('typeSymptoms')} className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-md outline-none focus:border-slate-400 transition-all text-sm text-slate-800" disabled={loading} />
-              <button type="submit" disabled={loading || !input.trim()} className="bg-slate-900 text-white px-5 py-3 rounded-md hover:bg-slate-800 transition-all disabled:bg-slate-300 font-semibold text-sm">{t('send')}</button>
+              <button type="submit" disabled={loading || !input.trim()} className="bg-brand-700 text-white px-5 py-3 rounded-md hover:bg-brand-800 transition-all disabled:bg-slate-300 font-semibold text-sm">{t('send')}</button>
             </form>
           </div>
         ) : (
@@ -146,7 +146,7 @@ const ChatbotPage = () => {
               <input type="text" required value={med1} onChange={(e) => setMed1(e.target.value)} placeholder={t('medicine1')} className="flex-1 px-3 py-2.5 bg-white border border-slate-200 rounded-md outline-none focus:border-slate-400 text-sm" disabled={loading}/>
               <span className="flex items-center font-bold text-slate-400">+</span>
               <input type="text" required value={med2} onChange={(e) => setMed2(e.target.value)} placeholder={t('medicine2')} className="flex-1 px-3 py-2.5 bg-white border border-slate-200 rounded-md outline-none focus:border-slate-400 text-sm" disabled={loading}/>
-              <button type="submit" disabled={loading || !med1 || !med2} className="bg-slate-900 text-white px-4 py-2.5 rounded-md hover:bg-slate-800 transition-all disabled:bg-slate-300 font-semibold text-sm">{t('analyze')}</button>
+              <button type="submit" disabled={loading || !med1 || !med2} className="bg-brand-700 text-white px-4 py-2.5 rounded-md hover:bg-brand-800 transition-all disabled:bg-slate-300 font-semibold text-sm">{t('analyze')}</button>
             </div>
           </form>
         )}

@@ -61,14 +61,14 @@ const ProfilePage = () => {
     <div className="bg-slate-50 min-h-[90vh] py-12 px-4">
       <div className="max-w-3xl mx-auto">
         <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="bg-slate-900 p-8 flex items-center gap-6 text-white">
-            <div className="w-20 h-20 bg-blue-600 rounded-full flex items-center justify-center text-3xl font-black shadow-lg border-4 border-slate-800">
+          <div className="bg-brand-700 p-8 flex items-center gap-6 text-white">
+            <div className="w-20 h-20 bg-brand-600 rounded-full flex items-center justify-center text-3xl font-black shadow-lg border-4 border-brand-800">
               {formData.name.charAt(0)}
             </div>
             <div>
               <h1 className="text-3xl font-black">{formData.name}</h1>
-              <p className="text-slate-400 font-medium flex items-center gap-2 mt-1">
-                {user?.email} <span className="bg-emerald-500/20 text-emerald-400 text-[10px] px-2 py-0.5 rounded font-bold uppercase">{user?.role}</span>
+              <p className="text-brand-100 font-medium flex items-center gap-2 mt-1">
+                {user?.email} <span className="bg-lime-accent text-brand-900 text-[10px] px-2 py-0.5 rounded font-bold uppercase">{user?.role}</span>
               </p>
             </div>
           </div>
@@ -84,14 +84,14 @@ const ProfilePage = () => {
                   <label className="block text-sm font-bold text-slate-700 mb-2">{t('fullNameLabel')}</label>
                   <div className="relative">
                     <User className="absolute left-4 top-3.5 w-5 h-5 text-slate-400" />
-                    <input type="text" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500 text-slate-800 font-medium" />
+                    <input type="text" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-brand-500 text-slate-800 font-medium" />
                   </div>
                 </div>
                 <div>
                   <label className="block text-sm font-bold text-slate-700 mb-2">{t('phoneNumber')}</label>
                   <div className="relative">
                     <Phone className="absolute left-4 top-3.5 w-5 h-5 text-slate-400" />
-                    <input type="text" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value.replace(/\D/g, '').slice(0, 10)})} className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500 text-slate-800 font-medium" />
+                    <input type="text" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value.replace(/\D/g, '').slice(0, 10)})} className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-brand-500 text-slate-800 font-medium" />
                   </div>
                 </div>
               </div>
@@ -121,7 +121,7 @@ const ProfilePage = () => {
               </div>
             </div>
 
-            <button type="submit" disabled={updating} className="w-full bg-slate-900 hover:bg-slate-800 text-white py-4 rounded-xl font-black text-lg transition-all shadow-md">
+            <button type="submit" disabled={updating} className="w-full bg-brand-700 hover:bg-brand-800 text-white py-4 rounded-xl font-black text-lg transition-all shadow-md">
               {updating ? t('savingChanges') : t('saveChanges')}
             </button>
           </form>

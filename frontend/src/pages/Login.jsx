@@ -83,7 +83,7 @@ const Login = () => {
             <button
               key={key}
               onClick={() => setRoleTab(key)}
-              className={`flex flex-col items-center gap-1 py-2 rounded-lg text-xs font-bold transition-all ${roleTab === key ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}
+              className={`flex flex-col items-center gap-1 py-2 rounded-lg text-xs font-bold transition-all ${roleTab === key ? 'bg-white shadow-sm text-brand-600' : 'text-slate-500'}`}
             >
               <Icon size={16} /> {label}
             </button>
@@ -95,31 +95,31 @@ const Login = () => {
             <label className="text-xs font-bold text-slate-600 mb-1 block">Email Address</label>
             <div className="relative">
               <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="Enter your email" className="w-full pl-9 pr-3 py-2.5 border border-slate-300 rounded-lg text-sm outline-none focus:border-blue-500" />
+              <input type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="Enter your email" className="w-full pl-9 pr-3 py-2.5 border border-slate-300 rounded-lg text-sm outline-none focus:border-brand-500" />
             </div>
           </div>
 
           <div>
             <div className="flex justify-between items-center mb-1">
               <label className="text-xs font-bold text-slate-600 block">Password</label>
-              <button type="button" onClick={() => setShowForgot(true)} className="text-xs font-bold text-blue-600 hover:underline">Forgot Password?</button>
+              <button type="button" onClick={() => setShowForgot(true)} className="text-xs font-bold text-brand-600 hover:underline">Forgot Password?</button>
             </div>
             <div className="relative">
               <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} required placeholder="Enter your password" className="w-full pl-9 pr-9 py-2.5 border border-slate-300 rounded-lg text-sm outline-none focus:border-blue-500" />
+              <input type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} required placeholder="Enter your password" className="w-full pl-9 pr-9 py-2.5 border border-slate-300 rounded-lg text-sm outline-none focus:border-brand-500" />
               <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
           </div>
 
-          <button type="submit" disabled={loading} className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 disabled:bg-slate-300">
+          <button type="submit" disabled={loading} className="w-full bg-brand-600 hover:bg-brand-700 text-white py-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 disabled:bg-slate-300">
             <LogIn size={16} /> {loading ? 'Signing In...' : 'Sign In securely'}
           </button>
         </form>
 
         <p className="text-center text-sm text-slate-500 mt-4">
-          New to MedMarket? <a href="/register" className="text-blue-600 font-bold hover:underline">Create an account</a>
+          New to MedMarket? <a href="/register" className="text-brand-600 font-bold hover:underline">Create an account</a>
         </p>
 
         {roleTab === 'customer' && (
@@ -143,16 +143,16 @@ const Login = () => {
             {resetStep === 'phone' ? (
               <>
                 <p className="text-xs text-slate-500 mb-3">We'll verify it's you using an OTP sent to your registered phone.</p>
-                <input type="tel" value={resetPhone} onChange={e => setResetPhone(e.target.value.replace(/\D/g, '').slice(0, 10))} placeholder="Registered phone number" className="w-full p-2.5 border border-slate-300 rounded-lg text-sm outline-none focus:border-blue-500 mb-3" />
-                <button onClick={handleSendResetOtp} disabled={resetLoading} className="w-full bg-blue-600 text-white py-2.5 rounded-lg font-bold text-sm disabled:bg-slate-300">
+                <input type="tel" value={resetPhone} onChange={e => setResetPhone(e.target.value.replace(/\D/g, '').slice(0, 10))} placeholder="Registered phone number" className="w-full p-2.5 border border-slate-300 rounded-lg text-sm outline-none focus:border-brand-500 mb-3" />
+                <button onClick={handleSendResetOtp} disabled={resetLoading} className="w-full bg-brand-600 text-white py-2.5 rounded-lg font-bold text-sm disabled:bg-slate-300">
                   {resetLoading ? 'Sending OTP...' : 'Send OTP'}
                 </button>
               </>
             ) : (
               <>
-                <input type="text" value={resetOtp} onChange={e => setResetOtp(e.target.value.replace(/\D/g, '').slice(0, 4))} placeholder="Enter 4-digit OTP" className="w-full p-2.5 border border-slate-300 rounded-lg text-sm outline-none focus:border-blue-500 mb-3" />
-                <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="New Password" className="w-full p-2.5 border border-slate-300 rounded-lg text-sm outline-none focus:border-blue-500 mb-3" />
-                <button onClick={handleResetPassword} disabled={resetLoading} className="w-full bg-blue-600 text-white py-2.5 rounded-lg font-bold text-sm disabled:bg-slate-300">
+                <input type="text" value={resetOtp} onChange={e => setResetOtp(e.target.value.replace(/\D/g, '').slice(0, 4))} placeholder="Enter 4-digit OTP" className="w-full p-2.5 border border-slate-300 rounded-lg text-sm outline-none focus:border-brand-500 mb-3" />
+                <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="New Password" className="w-full p-2.5 border border-slate-300 rounded-lg text-sm outline-none focus:border-brand-500 mb-3" />
+                <button onClick={handleResetPassword} disabled={resetLoading} className="w-full bg-brand-600 text-white py-2.5 rounded-lg font-bold text-sm disabled:bg-slate-300">
                   {resetLoading ? 'Resetting...' : 'Reset Password'}
                 </button>
               </>

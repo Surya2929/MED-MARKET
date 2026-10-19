@@ -37,16 +37,16 @@ const ReturnDecisionModal = ({ order, onClose, onDecided }) => {
   return (
     <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[85vh] flex flex-col overflow-hidden">
-        <div className="bg-slate-900 text-white px-5 py-4 flex justify-between items-center shrink-0">
+        <div className="bg-brand-700 text-white px-5 py-4 flex justify-between items-center shrink-0">
           <h3 className="font-bold text-sm flex items-center gap-2"><RotateCcw size={16}/> {t('returnDetails')}</h3>
           <button onClick={onClose} className="p-1.5 hover:bg-white/10 rounded-lg"><X size={18}/></button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
 
-          <div className={`flex items-center gap-2 p-3 rounded-lg border ${order.requestType === 'Refund' ? 'bg-emerald-50 border-emerald-200' : 'bg-blue-50 border-blue-200'}`}>
-            {order.requestType === 'Refund' ? <Wallet size={16} className="text-emerald-600"/> : <Package size={16} className="text-blue-600"/>}
-            <p className={`text-xs font-bold ${order.requestType === 'Refund' ? 'text-emerald-800' : 'text-blue-800'}`}>
+          <div className={`flex items-center gap-2 p-3 rounded-lg border ${order.requestType === 'Refund' ? 'bg-emerald-50 border-emerald-200' : 'bg-brand-50 border-brand-100'}`}>
+            {order.requestType === 'Refund' ? <Wallet size={16} className="text-emerald-600"/> : <Package size={16} className="text-brand-600"/>}
+            <p className={`text-xs font-bold ${order.requestType === 'Refund' ? 'text-emerald-800' : 'text-brand-800'}`}>
               Customer requested: {order.requestType === 'Refund' ? 'Refund to MedMarket Wallet' : 'Return Item Only (no wallet credit)'}
             </p>
           </div>

@@ -82,7 +82,7 @@ const ReturnRequestModal = ({ order, onClose, onSubmitted }) => {
   return (
     <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[85vh] flex flex-col overflow-hidden">
-        <div className="bg-slate-900 text-white px-5 py-4 flex justify-between items-center shrink-0">
+        <div className="bg-brand-700 text-white px-5 py-4 flex justify-between items-center shrink-0">
           <h3 className="font-bold text-sm flex items-center gap-2"><RotateCcw size={16}/> {t('returnRequestTitle')}</h3>
           <button onClick={onClose} className="p-1.5 hover:bg-white/10 rounded-lg"><X size={18}/></button>
         </div>
@@ -102,9 +102,9 @@ const ReturnRequestModal = ({ order, onClose, onSubmitted }) => {
               </button>
               <button
                 onClick={() => setRequestType('Return')}
-                className={`p-3 rounded-lg border-2 text-left transition-colors ${requestType === 'Return' ? 'border-blue-500 bg-blue-50/50' : 'border-slate-200'}`}
+                className={`p-3 rounded-lg border-2 text-left transition-colors ${requestType === 'Return' ? 'border-brand-500 bg-brand-50/50' : 'border-slate-200'}`}
               >
-                <Package size={16} className={requestType === 'Return' ? 'text-blue-600' : 'text-slate-400'} />
+                <Package size={16} className={requestType === 'Return' ? 'text-brand-600' : 'text-slate-400'} />
                 <p className="text-xs font-bold text-slate-800 mt-1">Return Item Only</p>
                 <p className="text-[10px] text-slate-500">No wallet credit</p>
               </button>
@@ -149,14 +149,14 @@ const ReturnRequestModal = ({ order, onClose, onSubmitted }) => {
 
           <div>
             <label className="text-xs font-bold text-slate-600 mb-1 block">{t('returnReasonLabel')}</label>
-            <select value={reason} onChange={e => setReason(e.target.value)} className="w-full p-2.5 border border-slate-300 rounded-lg text-sm outline-none focus:border-blue-500">
+            <select value={reason} onChange={e => setReason(e.target.value)} className="w-full p-2.5 border border-slate-300 rounded-lg text-sm outline-none focus:border-brand-500">
               {REASON_KEYS.map(k => <option key={k} value={k}>{t(k)}</option>)}
             </select>
           </div>
 
           <div>
             <label className="text-xs font-bold text-slate-600 mb-1 block">{t('describeReturnIssue')}</label>
-            <textarea value={description} onChange={e => setDescription(e.target.value)} rows="4" className="w-full p-2.5 border border-slate-300 rounded-lg text-sm outline-none focus:border-blue-500 resize-none" placeholder={t('describeReturnIssue')} />
+            <textarea value={description} onChange={e => setDescription(e.target.value)} rows="4" className="w-full p-2.5 border border-slate-300 rounded-lg text-sm outline-none focus:border-brand-500 resize-none" placeholder={t('describeReturnIssue')} />
           </div>
 
           <div>

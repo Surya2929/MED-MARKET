@@ -166,23 +166,23 @@ const VendorDashboard = () => {
     <div className="bg-slate-50 min-h-screen font-sans text-slate-800">
       
       {/* 🚀 COMPACT ADMIN NAVBAR */}
-      <nav className="bg-slate-900 text-white px-6 py-3 flex justify-between items-center sticky top-0 z-50 shadow-md">
+      <nav className="bg-brand-700 text-white px-6 py-3 flex justify-between items-center sticky top-0 z-50 shadow-md">
         <div className="flex items-center gap-3">
-          <div className="bg-blue-600 p-2 rounded-lg"><Store size={18}/></div>
+          <div className="bg-lime-accent text-brand-900 p-2 rounded-lg"><Store size={18}/></div>
           <div>
             <h1 className="text-sm font-bold uppercase tracking-wider">Vendor Console</h1>
             <div className="flex items-center gap-2 mt-0.5">
-               <span className="text-[10px] text-slate-300">{storeStatus?.storeName}</span>
-               <span className="w-1 h-1 bg-slate-500 rounded-full"></span>
+               <span className="text-[10px] text-brand-100">{storeStatus?.storeName}</span>
+               <span className="w-1 h-1 bg-brand-500 rounded-full"></span>
                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase ${storeStatus?.isVerified ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'}`}>
                  {storeStatus?.isVerified ? 'Verified' : 'Pending'}
                </span>
             </div>
           </div>
         </div>
-        <div className="text-right border-l border-slate-700 pl-4">
-           <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Delivered Sales</p>
-           <h3 className="text-lg font-black text-emerald-400">₹{totalSales.toLocaleString()}</h3>
+        <div className="text-right border-l border-brand-600 pl-4">
+           <p className="text-[10px] font-semibold text-brand-100 uppercase tracking-widest">Delivered Sales</p>
+           <h3 className="text-lg font-black text-lime-accent">₹{totalSales.toLocaleString()}</h3>
         </div>
       </nav>
 
@@ -193,7 +193,7 @@ const VendorDashboard = () => {
           <div className="lg:col-span-1 space-y-4">
             <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
               <div><p className="text-[10px] font-bold text-slate-500 uppercase">Live Catalog</p><h3 className="text-2xl font-black text-slate-800">{totalProducts}</h3></div>
-              <Database className="text-blue-500 opacity-20" size={28}/>
+              <Database className="text-brand-500 opacity-20" size={28}/>
             </div>
             <div className="bg-white p-5 rounded-xl shadow-sm border border-rose-100 flex items-center justify-between">
               <div><p className="text-[10px] font-bold text-rose-500 uppercase">Out of Stock</p><h3 className="text-2xl font-black text-rose-600">{outOfStock}</h3></div>
@@ -212,8 +212,8 @@ const VendorDashboard = () => {
             
             {/* TABS */}
             <div className="flex gap-2 mb-6 border-b border-slate-200 pb-2">
-              <button onClick={() => setActiveTab('inventory')} className={`px-4 py-2 text-sm font-bold rounded-t-lg transition-colors ${activeTab === 'inventory' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}>Stock Manager</button>
-              <button onClick={() => setActiveTab('orders')} className={`px-4 py-2 text-sm font-bold rounded-t-lg transition-colors flex items-center gap-2 ${activeTab === 'orders' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}>
+              <button onClick={() => setActiveTab('inventory')} className={`px-4 py-2 text-sm font-bold rounded-t-lg transition-colors ${activeTab === 'inventory' ? 'border-b-2 border-brand-600 text-brand-600' : 'text-slate-500 hover:text-slate-700'}`}>Stock Manager</button>
+              <button onClick={() => setActiveTab('orders')} className={`px-4 py-2 text-sm font-bold rounded-t-lg transition-colors flex items-center gap-2 ${activeTab === 'orders' ? 'border-b-2 border-brand-600 text-brand-600' : 'text-slate-500 hover:text-slate-700'}`}>
                 Orders
                 {pendingOrdersCount > 0 && <span className="bg-rose-500 text-white px-1.5 py-0.5 rounded text-[10px]">{pendingOrdersCount}</span>}
                 {pendingReturnsCount > 0 && <span className="bg-purple-500 text-white px-1.5 py-0.5 rounded text-[10px] flex items-center gap-0.5"><RotateCcw size={9}/> {pendingReturnsCount}</span>}
@@ -226,8 +226,8 @@ const VendorDashboard = () => {
                 {/* 🚀 DICTIONARY / CUSTOM MED SECTION */}
                 <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                   <div className="px-5 py-3 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                    <h2 className="text-sm font-bold text-slate-700 flex items-center gap-2"><PlusSquare size={16} className="text-blue-600"/> Add Medicine to Store</h2>
-                    <button onClick={() => setIsCustomMedicine(!isCustomMedicine)} className="text-blue-600 text-xs font-bold hover:underline">
+                    <h2 className="text-sm font-bold text-slate-700 flex items-center gap-2"><PlusSquare size={16} className="text-brand-600"/> Add Medicine to Store</h2>
+                    <button onClick={() => setIsCustomMedicine(!isCustomMedicine)} className="text-brand-600 text-xs font-bold hover:underline">
                       {isCustomMedicine ? '← View Master Dictionary' : '+ Create New Medicine'}
                     </button>
                   </div>
@@ -257,35 +257,35 @@ const VendorDashboard = () => {
                             <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-3">
                               <div className="md:col-span-2">
                                 <label className="text-[10px] font-bold text-slate-500 mb-1 block">Brand Name</label>
-                                <input type="text" value={customMed.name} onChange={e=>setCustomMed({...customMed, name: e.target.value})} className="w-full p-2 text-sm border border-slate-200 rounded-md outline-none focus:border-blue-500" placeholder="e.g. Crocin 650" />
+                                <input type="text" value={customMed.name} onChange={e=>setCustomMed({...customMed, name: e.target.value})} className="w-full p-2 text-sm border border-slate-200 rounded-md outline-none focus:border-brand-500" placeholder="e.g. Crocin 650" />
                               </div>
                               <div>
                                 <label className="text-[10px] font-bold text-slate-500 mb-1 block">Price (₹)</label>
-                                <input type="number" value={customMed.price} onChange={e=>setCustomMed({...customMed, price: e.target.value})} className="w-full p-2 text-sm border border-slate-200 rounded-md outline-none focus:border-blue-500" placeholder="0" />
+                                <input type="number" value={customMed.price} onChange={e=>setCustomMed({...customMed, price: e.target.value})} className="w-full p-2 text-sm border border-slate-200 rounded-md outline-none focus:border-brand-500" placeholder="0" />
                               </div>
                               <div>
                                 <label className="text-[10px] font-bold text-slate-500 mb-1 block">Manufacturer</label>
-                                <input type="text" value={customMed.manufacturer} onChange={e=>setCustomMed({...customMed, manufacturer: e.target.value})} className="w-full p-2 text-sm border border-slate-200 rounded-md outline-none focus:border-blue-500" placeholder="Company Name" />
+                                <input type="text" value={customMed.manufacturer} onChange={e=>setCustomMed({...customMed, manufacturer: e.target.value})} className="w-full p-2 text-sm border border-slate-200 rounded-md outline-none focus:border-brand-500" placeholder="Company Name" />
                               </div>
                               <div>
                                 <label className="text-[10px] font-bold text-slate-500 mb-1 block">Composition</label>
-                                <input type="text" value={customMed.composition} onChange={e=>setCustomMed({...customMed, composition: e.target.value})} className="w-full p-2 text-sm border border-slate-200 rounded-md outline-none focus:border-blue-500" placeholder="Salt details" />
+                                <input type="text" value={customMed.composition} onChange={e=>setCustomMed({...customMed, composition: e.target.value})} className="w-full p-2 text-sm border border-slate-200 rounded-md outline-none focus:border-brand-500" placeholder="Salt details" />
                               </div>
                               <div>
                                 <label className="text-[10px] font-bold text-slate-500 mb-1 block">Initial Stock</label>
-                                <input type="number" value={customMed.stock} onChange={e=>setCustomMed({...customMed, stock: e.target.value})} className="w-full p-2 text-sm border border-slate-200 rounded-md outline-none focus:border-blue-500" placeholder="0" />
+                                <input type="number" value={customMed.stock} onChange={e=>setCustomMed({...customMed, stock: e.target.value})} className="w-full p-2 text-sm border border-slate-200 rounded-md outline-none focus:border-brand-500" placeholder="0" />
                               </div>
                               <div>
                                 <label className="text-[10px] font-bold text-slate-500 mb-1 block">Mfg Date</label>
-                                <input type="date" value={customMed.manufactureDate} onChange={e=>setCustomMed({...customMed, manufactureDate: e.target.value})} className="w-full p-2 text-sm border border-slate-200 rounded-md outline-none focus:border-blue-500 text-slate-600" />
+                                <input type="date" value={customMed.manufactureDate} onChange={e=>setCustomMed({...customMed, manufactureDate: e.target.value})} className="w-full p-2 text-sm border border-slate-200 rounded-md outline-none focus:border-brand-500 text-slate-600" />
                               </div>
                               <div>
                                 <label className="text-[10px] font-bold text-slate-500 mb-1 block">Exp Date</label>
-                                <input type="date" value={customMed.expiryDate} onChange={e=>setCustomMed({...customMed, expiryDate: e.target.value})} className="w-full p-2 text-sm border border-slate-200 rounded-md outline-none focus:border-blue-500 text-slate-600" />
+                                <input type="date" value={customMed.expiryDate} onChange={e=>setCustomMed({...customMed, expiryDate: e.target.value})} className="w-full p-2 text-sm border border-slate-200 rounded-md outline-none focus:border-brand-500 text-slate-600" />
                               </div>
                               <div className="md:col-span-3">
                                 <label className="text-[10px] font-bold text-slate-500 mb-1 block">Usage / Indications</label>
-                                <textarea value={customMed.uses} onChange={e=>setCustomMed({...customMed, uses: e.target.value})} className="w-full p-2 text-sm border border-slate-200 rounded-md outline-none focus:border-blue-500 resize-none" rows="2" placeholder="What is this used for?" />
+                                <textarea value={customMed.uses} onChange={e=>setCustomMed({...customMed, uses: e.target.value})} className="w-full p-2 text-sm border border-slate-200 rounded-md outline-none focus:border-brand-500 resize-none" rows="2" placeholder="What is this used for?" />
                               </div>
                               <div className="md:col-span-3">
                                 <label className="flex items-center gap-2 bg-rose-50 border border-rose-100 rounded-md px-3 py-2.5 cursor-pointer w-fit">
@@ -295,7 +295,7 @@ const VendorDashboard = () => {
                               </div>
                             </div>
                           </div>
-                          <button onClick={handleBulkSave} disabled={loading} className="w-full bg-slate-800 hover:bg-slate-900 text-white py-3 rounded-lg font-bold text-sm transition-colors">
+                          <button onClick={handleBulkSave} disabled={loading} className="w-full bg-brand-800 hover:bg-brand-900 text-white py-3 rounded-lg font-bold text-sm transition-colors">
                             {loading ? 'Processing...' : 'Save & Add to Inventory'}
                           </button>
                         </div>
@@ -303,7 +303,7 @@ const VendorDashboard = () => {
                         <div>
                           <div className="flex justify-between items-center mb-3">
                              <p className="text-xs text-slate-500">Select medicines from dictionary and set your price.</p>
-                             <button onClick={handleBulkSave} className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg text-xs font-bold shadow-sm transition-colors">Save Selected</button>
+                             <button onClick={handleBulkSave} className="bg-brand-600 hover:bg-brand-700 text-white px-5 py-2 rounded-lg text-xs font-bold shadow-sm transition-colors">Save Selected</button>
                           </div>
                           
                           {/* 🚀 COMPACT TABLE */}
@@ -322,7 +322,7 @@ const VendorDashboard = () => {
                                 {masterMedicines.map(med => {
                                    const isSelected = selectedMeds[med._id]?.selected || false;
                                    return (
-                                  <tr key={med._id} className={`${isSelected ? 'bg-blue-50/40' : 'hover:bg-slate-50'}`}>
+                                  <tr key={med._id} className={`${isSelected ? 'bg-brand-50/40' : 'hover:bg-slate-50'}`}>
                                     <td className="p-3 text-center"><input type="checkbox" checked={isSelected} onChange={()=>handleCheckboxChange(med._id)} className="w-4 h-4 cursor-pointer" /></td>
                                     <td className="p-3">
                                       {(medImagePreviews[med._id] || med.imageUrl) ? (
@@ -344,11 +344,11 @@ const VendorDashboard = () => {
                                     </td>
                                     <td className="p-3">
                                       <div className="flex items-center gap-1">
-                                        <input type="number" disabled={!isSelected} value={selectedMeds[med._id]?.price || ''} onChange={e=>handleInputChange(med._id, 'price', e.target.value)} className="w-full p-1.5 border border-slate-300 rounded text-sm disabled:bg-slate-100 outline-none focus:border-blue-500" placeholder="00" />
+                                        <input type="number" disabled={!isSelected} value={selectedMeds[med._id]?.price || ''} onChange={e=>handleInputChange(med._id, 'price', e.target.value)} className="w-full p-1.5 border border-slate-300 rounded text-sm disabled:bg-slate-100 outline-none focus:border-brand-500" placeholder="00" />
                                         <button onClick={()=>applyDefaultPrice(med._id)} disabled={!isSelected} className="p-1.5 bg-emerald-50 text-emerald-600 rounded border border-emerald-100 hover:bg-emerald-100 disabled:opacity-50" title="Apply Default ₹50"><CheckSquare size={14}/></button>
                                       </div>
                                     </td>
-                                    <td className="p-3"><input type="number" disabled={!isSelected} value={selectedMeds[med._id]?.stock || ''} onChange={e=>handleInputChange(med._id, 'stock', e.target.value)} className="w-full p-1.5 border border-slate-300 rounded text-sm disabled:bg-slate-100 outline-none focus:border-blue-500" placeholder="0" /></td>
+                                    <td className="p-3"><input type="number" disabled={!isSelected} value={selectedMeds[med._id]?.stock || ''} onChange={e=>handleInputChange(med._id, 'stock', e.target.value)} className="w-full p-1.5 border border-slate-300 rounded text-sm disabled:bg-slate-100 outline-none focus:border-brand-500" placeholder="0" /></td>
                                   </tr>
                                 )})}
                               </tbody>
@@ -380,7 +380,7 @@ const VendorDashboard = () => {
                                       <p className="font-bold text-slate-800">{item.medicineId?.name}</p>
                                       <div className="flex items-center gap-2 mt-0.5">
                                         <p className="text-[10px] text-slate-500">{item.medicineId?.manufacturer || 'Unknown'}</p>
-                                        {isLiquid && <span className="text-[9px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded flex items-center gap-1 border border-blue-100"><Droplets size={10}/> Liquid</span>}
+                                        {isLiquid && <span className="text-[9px] bg-brand-50 text-brand-600 px-1.5 py-0.5 rounded flex items-center gap-1 border border-brand-100"><Droplets size={10}/> Liquid</span>}
                                       </div>
                                     </div>
                                   </div>
@@ -390,7 +390,7 @@ const VendorDashboard = () => {
                                   <span className={`px-2 py-1 rounded text-xs font-bold ${item.stock > 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>{item.stock}</span>
                                 </td>
                                 <td className="p-4 text-right">
-                                   <button onClick={()=>handleEditClick(item)} className="p-2 text-blue-600 hover:bg-blue-50 rounded mr-1 transition-colors"><Edit3 size={16}/></button>
+                                   <button onClick={()=>handleEditClick(item)} className="p-2 text-brand-600 hover:bg-brand-50 rounded mr-1 transition-colors"><Edit3 size={16}/></button>
                                    <button onClick={()=>handleDeleteItem(item.medicineId?._id)} className="p-2 text-rose-500 hover:bg-rose-50 rounded transition-colors"><Trash2 size={16}/></button>
                                 </td>
                               </tr>
@@ -413,7 +413,7 @@ const VendorDashboard = () => {
                            <div className="flex-1">
                              <div className="flex items-center gap-3 mb-4">
                                <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded">ID: #{order._id.slice(-6)}</span>
-                               <span className={`text-[10px] font-bold uppercase px-2 py-1 rounded border ${order.status === 'Pending' ? 'bg-amber-50 text-amber-600 border-amber-200' : order.status === 'Return Requested' ? 'bg-purple-50 text-purple-600 border-purple-200' : 'bg-blue-50 text-blue-600 border-blue-200'}`}>{order.status}</span>
+                               <span className={`text-[10px] font-bold uppercase px-2 py-1 rounded border ${order.status === 'Pending' ? 'bg-amber-50 text-amber-600 border-amber-200' : order.status === 'Return Requested' ? 'bg-purple-50 text-purple-600 border-purple-200' : 'bg-brand-50 text-brand-600 border-brand-100'}`}>{order.status}</span>
                                <button onClick={() => setComplaintOrder(order)} className="ml-auto text-[10px] font-bold text-slate-500 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-md flex items-center gap-1 transition-colors"><MessageSquare size={11}/> Report Customer</button>
                              </div>
                              <h4 className="text-lg font-bold text-slate-800 flex items-center gap-2"><User size={16} className="text-slate-400"/> {order.customerId?.name}</h4>
@@ -435,7 +435,7 @@ const VendorDashboard = () => {
                                  <h3 className="text-3xl font-black text-slate-900 mt-1">₹{order.totalAmount}</h3>
                               </div>
                               <div className="mt-6 space-y-2">
-                                 {order.status === 'Pending' && <button onClick={() => handleUpdateOrderStatus(order._id, 'Accepted')} className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg text-sm font-bold transition-colors">Approve Order</button>}
+                                 {order.status === 'Pending' && <button onClick={() => handleUpdateOrderStatus(order._id, 'Accepted')} className="w-full bg-brand-600 hover:bg-brand-700 text-white py-2.5 rounded-lg text-sm font-bold transition-colors">Approve Order</button>}
                                  {order.status === 'Accepted' && <button onClick={() => handleUpdateOrderStatus(order._id, 'Packed')} className="w-full bg-amber-500 hover:bg-amber-600 text-white py-2.5 rounded-lg text-sm font-bold transition-colors">Mark Packed</button>}
                                  {order.status === 'Packed' && <button onClick={() => handleUpdateOrderStatus(order._id, 'Out for Delivery')} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-lg text-sm font-bold transition-colors">Ship Order</button>}
                                  {order.status === 'Out for Delivery' && <button onClick={() => handleUpdateOrderStatus(order._id, 'Delivered')} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-colors"><CheckCircle2 size={16}/> Delivered</button>}

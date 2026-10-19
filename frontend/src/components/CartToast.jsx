@@ -18,7 +18,7 @@ const CartToast = () => {
           <p className="text-xs font-bold text-emerald-600 flex items-center gap-1"><CheckCircle2 size={12}/> Added to Cart</p>
           <p className="text-sm font-bold text-slate-800 truncate mt-0.5">{toast.name}</p>
           <p className="text-xs text-slate-500 mt-0.5">Qty: {toast.qty} · ₹{toast.price} each</p>
-          <Link to="/cart" onClick={dismissToast} className="inline-flex items-center gap-1.5 mt-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors">
+          <Link to="/cart" onClick={dismissToast} className="inline-flex items-center gap-1.5 mt-2 bg-brand-700 hover:bg-brand-800 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors">
             <ShoppingCart size={12}/> View Cart
           </Link>
         </div>

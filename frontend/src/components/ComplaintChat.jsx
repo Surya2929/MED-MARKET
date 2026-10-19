@@ -57,7 +57,7 @@ const ComplaintChat = ({ orderId, reportId, otherPartyLabel, onClose }) => {
   return (
     <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg h-[600px] flex flex-col overflow-hidden">
-        <div className="bg-slate-900 text-white px-5 py-4 flex justify-between items-center shrink-0">
+        <div className="bg-brand-700 text-white px-5 py-4 flex justify-between items-center shrink-0">
           <div className="flex items-center gap-2">
             <MessageSquare size={18}/>
             <div>
@@ -80,13 +80,13 @@ const ComplaintChat = ({ orderId, reportId, otherPartyLabel, onClose }) => {
             </div>
             <div>
               <label className="text-xs font-bold text-slate-600 mb-1 block">Reason</label>
-              <select value={reason} onChange={e => setReason(e.target.value)} className="w-full p-2.5 border border-slate-300 rounded-lg text-sm outline-none focus:border-blue-500">
+              <select value={reason} onChange={e => setReason(e.target.value)} className="w-full p-2.5 border border-slate-300 rounded-lg text-sm outline-none focus:border-brand-500">
                 {REASONS.map(r => <option key={r} value={r}>{r}</option>)}
               </select>
             </div>
             <div>
               <label className="text-xs font-bold text-slate-600 mb-1 block">Describe the issue</label>
-              <textarea value={description} onChange={e => setDescription(e.target.value)} rows="5" className="w-full p-2.5 border border-slate-300 rounded-lg text-sm outline-none focus:border-blue-500 resize-none" placeholder="What went wrong?" />
+              <textarea value={description} onChange={e => setDescription(e.target.value)} rows="5" className="w-full p-2.5 border border-slate-300 rounded-lg text-sm outline-none focus:border-brand-500 resize-none" placeholder="What went wrong?" />
             </div>
             <button onClick={handleCreate} disabled={sending} className="w-full bg-rose-600 hover:bg-rose-700 text-white py-2.5 rounded-lg font-bold text-sm disabled:bg-slate-300">
               {sending ? 'Submitting...' : 'Submit Complaint'}
@@ -100,7 +100,7 @@ const ComplaintChat = ({ orderId, reportId, otherPartyLabel, onClose }) => {
                 const isMine = senderId === user._id;
                 return (
                   <div key={i} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[75%] px-3.5 py-2.5 rounded-xl text-sm ${isMine ? 'bg-blue-600 text-white rounded-tr-none' : m.senderRole === 'admin' ? 'bg-slate-800 text-white rounded-tl-none' : 'bg-white border border-slate-200 text-slate-800 rounded-tl-none'}`}>
+                    <div className={`max-w-[75%] px-3.5 py-2.5 rounded-xl text-sm ${isMine ? 'bg-brand-600 text-white rounded-tr-none' : m.senderRole === 'admin' ? 'bg-brand-800 text-white rounded-tl-none' : 'bg-white border border-slate-200 text-slate-800 rounded-tl-none'}`}>
                       <p className="text-[10px] font-bold uppercase opacity-70 mb-0.5">{m.senderName} · {m.senderRole}</p>
                       <p className="leading-relaxed whitespace-pre-wrap">{m.text}</p>
                     </div>
@@ -110,8 +110,8 @@ const ComplaintChat = ({ orderId, reportId, otherPartyLabel, onClose }) => {
               <div ref={bottomRef} />
             </div>
             <div className="p-3 border-t border-slate-200 flex gap-2 shrink-0">
-              <input value={msgText} onChange={e => setMsgText(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSend()} placeholder="Type a message..." className="flex-1 px-3.5 py-2.5 bg-slate-100 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" />
-              <button onClick={handleSend} disabled={sending} className="bg-blue-600 hover:bg-blue-700 text-white p-2.5 rounded-lg disabled:bg-slate-300"><Send size={18}/></button>
+              <input value={msgText} onChange={e => setMsgText(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSend()} placeholder="Type a message..." className="flex-1 px-3.5 py-2.5 bg-slate-100 rounded-lg text-sm outline-none focus:ring-2 focus:ring-brand-500" />
+              <button onClick={handleSend} disabled={sending} className="bg-brand-600 hover:bg-brand-700 text-white p-2.5 rounded-lg disabled:bg-slate-300"><Send size={18}/></button>
             </div>
           </>
         )}

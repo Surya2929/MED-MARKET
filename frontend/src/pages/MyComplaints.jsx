@@ -31,7 +31,7 @@ const MyComplaints = () => {
 
   return (
     <div className="bg-slate-50 min-h-screen pb-16 font-sans">
-      <div className="bg-slate-900 py-10"><div className="max-w-4xl mx-auto px-4"><h1 className="text-3xl font-black text-white flex items-center gap-3"><ShieldAlert className="w-8 h-8 text-rose-400" /> {t('myComplaintsTitle')}</h1></div></div>
+      <div className="px-3 sm:px-6 lg:px-8 pt-4"><div className="max-w-7xl mx-auto bg-brand-700 rounded-[28px] py-10"><div className="max-w-4xl mx-auto px-4"><h1 className="text-3xl font-black text-white flex items-center gap-3"><ShieldAlert className="w-8 h-8 text-lime-accent" /> {t('myComplaintsTitle')}</h1></div></div></div>
 
       <div className="max-w-4xl mx-auto px-4 py-8">
         {reports.length === 0 ? (
@@ -45,7 +45,7 @@ const MyComplaints = () => {
             {reports.map((r) => {
               const statusUI = getStatusUI(r.status);
               return (
-                <button key={r._id} onClick={() => setOpenReport(r)} className="w-full text-left bg-white rounded-2xl shadow-sm border border-slate-200 p-5 hover:border-blue-300 hover:shadow-md transition flex justify-between items-center gap-4">
+                <button key={r._id} onClick={() => setOpenReport(r)} className="w-full text-left bg-white rounded-2xl shadow-sm border border-slate-200 p-5 hover:border-brand-500 hover:shadow-md transition flex justify-between items-center gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-xs font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded">{r.reason}</span>
@@ -56,7 +56,7 @@ const MyComplaints = () => {
                       {r.reportedStore ? <><Store size={11}/> {t('againstStore')}: {r.reportedStore.storeName}</> : <><User size={11}/> {t('against')}: {r.reportedUser?.name}</>}
                     </p>
                   </div>
-                  <div className="shrink-0 text-blue-600 text-xs font-bold flex items-center gap-1"><MessageSquare size={14}/> {t('openChat')}</div>
+                  <div className="shrink-0 text-brand-600 text-xs font-bold flex items-center gap-1"><MessageSquare size={14}/> {t('openChat')}</div>
                 </button>
               );
             })}

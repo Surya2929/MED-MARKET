@@ -77,10 +77,10 @@ const AddressSelector = ({ selectedId, onSelect }) => {
           <div
             key={addr._id}
             onClick={() => onSelect(addr)}
-            className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${isSelected ? 'border-blue-500 bg-blue-50/40' : 'border-slate-200 hover:border-slate-300 bg-white'}`}
+            className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${isSelected ? 'border-brand-500 bg-brand-50/40' : 'border-slate-200 hover:border-slate-300 bg-white'}`}
           >
             <div className="flex items-start gap-3">
-              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5 shrink-0 ${isSelected ? 'border-blue-600 bg-blue-600' : 'border-slate-300'}`}>
+              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5 shrink-0 ${isSelected ? 'border-brand-600 bg-brand-600' : 'border-slate-300'}`}>
                 {isSelected && <CheckCircle2 size={14} className="text-white" strokeWidth={3} />}
               </div>
               <div className="flex-1 min-w-0">
@@ -92,7 +92,7 @@ const AddressSelector = ({ selectedId, onSelect }) => {
                 <p className="text-xs text-slate-500 mt-0.5">{addr.addressLine}, {addr.city}, {addr.state} - {addr.pincode}</p>
               </div>
               <div className="flex gap-1 shrink-0">
-                <button onClick={(e) => { e.stopPropagation(); openEditForm(addr); }} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"><Edit3 size={14}/></button>
+                <button onClick={(e) => { e.stopPropagation(); openEditForm(addr); }} className="p-1.5 text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded transition-colors"><Edit3 size={14}/></button>
                 <button onClick={(e) => handleDelete(addr._id, e)} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors"><Trash2 size={14}/></button>
               </div>
             </div>
@@ -101,11 +101,11 @@ const AddressSelector = ({ selectedId, onSelect }) => {
       })}
 
       {!showForm ? (
-        <button onClick={openAddForm} className="w-full p-4 rounded-xl border-2 border-dashed border-slate-300 hover:border-blue-400 hover:bg-blue-50/30 transition-colors flex items-center justify-center gap-2 text-sm font-bold text-slate-600">
+        <button onClick={openAddForm} className="w-full p-4 rounded-xl border-2 border-dashed border-slate-300 hover:border-brand-500 hover:bg-brand-50/30 transition-colors flex items-center justify-center gap-2 text-sm font-bold text-slate-600">
           <Plus size={16}/> Add New Address
         </button>
       ) : (
-        <div className="p-4 rounded-xl border-2 border-blue-300 bg-blue-50/30 space-y-3">
+        <div className="p-4 rounded-xl border-2 border-brand-500 bg-brand-50/30 space-y-3">
           <div className="flex justify-between items-center">
             <h4 className="text-sm font-bold text-slate-800">{editingId ? 'Edit Address' : 'Add New Address'}</h4>
             <button onClick={() => setShowForm(false)} className="text-slate-400 hover:text-slate-600"><X size={16}/></button>
@@ -113,20 +113,20 @@ const AddressSelector = ({ selectedId, onSelect }) => {
 
           <div className="flex gap-2">
             {['Home', 'Work', 'Other'].map(l => (
-              <button key={l} onClick={() => setForm({...form, label: l})} className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-colors ${form.label === l ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-slate-300'}`}>{l}</button>
+              <button key={l} onClick={() => setForm({...form, label: l})} className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-colors ${form.label === l ? 'bg-brand-600 text-white border-brand-600' : 'bg-white text-slate-600 border-slate-300'}`}>{l}</button>
             ))}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <input type="text" value={form.fullName} onChange={e => setForm({...form, fullName: e.target.value})} placeholder="Full Name" className="col-span-2 p-2.5 border border-slate-300 rounded-lg text-sm outline-none focus:border-blue-500" />
-            <input type="tel" value={form.phone} onChange={e => setForm({...form, phone: e.target.value.replace(/\D/g,'').slice(0,10)})} placeholder="10-digit phone number" className="col-span-2 p-2.5 border border-slate-300 rounded-lg text-sm outline-none focus:border-blue-500" />
-            <textarea value={form.addressLine} onChange={e => setForm({...form, addressLine: e.target.value})} placeholder="House no, building, street, area" rows="2" className="col-span-2 p-2.5 border border-slate-300 rounded-lg text-sm outline-none focus:border-blue-500 resize-none" />
-            <input type="text" value={form.city} onChange={e => setForm({...form, city: e.target.value})} placeholder="City" className="p-2.5 border border-slate-300 rounded-lg text-sm outline-none focus:border-blue-500" />
-            <input type="text" value={form.state} onChange={e => setForm({...form, state: e.target.value})} placeholder="State" className="p-2.5 border border-slate-300 rounded-lg text-sm outline-none focus:border-blue-500" />
-            <input type="text" value={form.pincode} onChange={e => setForm({...form, pincode: e.target.value.replace(/\D/g,'').slice(0,6)})} placeholder="6-digit PIN code" className="col-span-2 p-2.5 border border-slate-300 rounded-lg text-sm outline-none focus:border-blue-500" />
+            <input type="text" value={form.fullName} onChange={e => setForm({...form, fullName: e.target.value})} placeholder="Full Name" className="col-span-2 p-2.5 border border-slate-300 rounded-lg text-sm outline-none focus:border-brand-500" />
+            <input type="tel" value={form.phone} onChange={e => setForm({...form, phone: e.target.value.replace(/\D/g,'').slice(0,10)})} placeholder="10-digit phone number" className="col-span-2 p-2.5 border border-slate-300 rounded-lg text-sm outline-none focus:border-brand-500" />
+            <textarea value={form.addressLine} onChange={e => setForm({...form, addressLine: e.target.value})} placeholder="House no, building, street, area" rows="2" className="col-span-2 p-2.5 border border-slate-300 rounded-lg text-sm outline-none focus:border-brand-500 resize-none" />
+            <input type="text" value={form.city} onChange={e => setForm({...form, city: e.target.value})} placeholder="City" className="p-2.5 border border-slate-300 rounded-lg text-sm outline-none focus:border-brand-500" />
+            <input type="text" value={form.state} onChange={e => setForm({...form, state: e.target.value})} placeholder="State" className="p-2.5 border border-slate-300 rounded-lg text-sm outline-none focus:border-brand-500" />
+            <input type="text" value={form.pincode} onChange={e => setForm({...form, pincode: e.target.value.replace(/\D/g,'').slice(0,6)})} placeholder="6-digit PIN code" className="col-span-2 p-2.5 border border-slate-300 rounded-lg text-sm outline-none focus:border-brand-500" />
           </div>
 
-          <button onClick={handleSave} disabled={saving} className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg font-bold text-sm disabled:bg-slate-300">
+          <button onClick={handleSave} disabled={saving} className="w-full bg-brand-600 hover:bg-brand-700 text-white py-2.5 rounded-lg font-bold text-sm disabled:bg-slate-300">
             {saving ? 'Saving...' : (editingId ? 'Update Address' : 'Save Address')}
           </button>
         </div>

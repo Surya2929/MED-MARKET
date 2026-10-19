@@ -138,7 +138,7 @@ const CartPage = () => {
     <div className="h-screen bg-slate-50 flex flex-col items-center justify-center">
       <ShoppingBag size={64} className="text-slate-300 mb-4"/>
       <h2 className="text-xl font-bold text-slate-700">{t('cartEmpty')}</h2>
-      <button onClick={() => navigate(-1)} className="mt-4 bg-blue-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-blue-700 transition">{t('goBack')}</button>
+      <button onClick={() => navigate(-1)} className="mt-4 bg-brand-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-brand-700 transition">{t('goBack')}</button>
     </div>
   );
 
@@ -146,7 +146,7 @@ const CartPage = () => {
     <div className="bg-slate-50 min-h-screen pb-20 font-sans">
 
       <div className="bg-white border-b border-slate-200 sticky top-0 z-50 px-4 py-3 flex items-center justify-between shadow-sm">
-        <button onClick={() => step === 'checkout' ? setStep('cart') : navigate(-1)} className="flex items-center gap-1 text-slate-600 hover:text-blue-600 font-semibold transition-colors">
+        <button onClick={() => step === 'checkout' ? setStep('cart') : navigate(-1)} className="flex items-center gap-1 text-slate-600 hover:text-brand-600 font-semibold transition-colors">
           <ChevronLeft size={20}/> {step === 'checkout' ? t('backToCart') : t('continueShopping')}
         </button>
         <span className="text-sm font-bold text-slate-800">{step === 'cart' ? `${t('yourCart')} (${cart.length})` : t('checkout')}</span>
@@ -207,7 +207,7 @@ const CartPage = () => {
           {step === 'checkout' && (
             <div className="space-y-6">
               <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                <h3 className="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2"><MapPin size={18} className="text-blue-500"/> Deliver To</h3>
+                <h3 className="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2"><MapPin size={18} className="text-brand-500"/> Deliver To</h3>
                 <AddressSelector selectedId={selectedAddress?._id} onSelect={setSelectedAddress} />
               </div>
 
@@ -230,7 +230,7 @@ const CartPage = () => {
 
               <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
                 <h3 className={`text-sm font-bold mb-4 flex items-center gap-2 ${needsPrescription ? 'text-rose-700' : 'text-slate-700'}`}>
-                  <UploadCloud size={18} className={needsPrescription ? 'text-rose-500' : 'text-blue-500'}/> {needsPrescription ? t('prescriptionRequiredLabel') : t('prescriptionOptional')}
+                  <UploadCloud size={18} className={needsPrescription ? 'text-rose-500' : 'text-brand-500'}/> {needsPrescription ? t('prescriptionRequiredLabel') : t('prescriptionOptional')}
                 </h3>
                 {!previewUrl ? (
                   <label className={`border-2 border-dashed rounded-lg h-24 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-50 transition ${needsPrescription ? 'border-rose-300' : 'border-slate-300'}`}>
@@ -249,14 +249,14 @@ const CartPage = () => {
                 <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
                   <h3 className="text-sm font-bold text-slate-700 mb-4">{t('paymentMethod')}</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <label className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all ${paymentMethod === 'cod' ? 'border-blue-500 bg-blue-50/50 shadow-sm' : 'border-slate-200 hover:border-slate-300'}`}>
-                      <input type="radio" name="paymentMethod" value="cod" checked={paymentMethod === 'cod'} onChange={() => setPaymentMethod('cod')} className="w-4 h-4 accent-blue-600" />
-                      <Truck size={20} className={paymentMethod === 'cod' ? 'text-blue-600' : 'text-slate-400'} />
+                    <label className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all ${paymentMethod === 'cod' ? 'border-brand-500 bg-brand-50/50 shadow-sm' : 'border-slate-200 hover:border-slate-300'}`}>
+                      <input type="radio" name="paymentMethod" value="cod" checked={paymentMethod === 'cod'} onChange={() => setPaymentMethod('cod')} className="w-4 h-4 accent-brand-600" />
+                      <Truck size={20} className={paymentMethod === 'cod' ? 'text-brand-600' : 'text-slate-400'} />
                       <span className="font-bold text-sm text-slate-800">{t('cashOnDelivery')}</span>
                     </label>
-                    <label className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all ${paymentMethod === 'online' ? 'border-blue-500 bg-blue-50/50 shadow-sm' : 'border-slate-200 hover:border-slate-300'}`}>
-                      <input type="radio" name="paymentMethod" value="online" checked={paymentMethod === 'online'} onChange={() => setPaymentMethod('online')} className="w-4 h-4 accent-blue-600" />
-                      <CreditCard size={20} className={paymentMethod === 'online' ? 'text-blue-600' : 'text-slate-400'} />
+                    <label className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all ${paymentMethod === 'online' ? 'border-brand-500 bg-brand-50/50 shadow-sm' : 'border-slate-200 hover:border-slate-300'}`}>
+                      <input type="radio" name="paymentMethod" value="online" checked={paymentMethod === 'online'} onChange={() => setPaymentMethod('online')} className="w-4 h-4 accent-brand-600" />
+                      <CreditCard size={20} className={paymentMethod === 'online' ? 'text-brand-600' : 'text-slate-400'} />
                       <span className="font-bold text-sm text-slate-800">{t('payOnline')}</span>
                     </label>
                   </div>
@@ -287,11 +287,11 @@ const CartPage = () => {
             </div>
 
             {step === 'cart' ? (
-              <button onClick={() => setStep('checkout')} className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-lg font-bold transition flex justify-center items-center gap-2">
+              <button onClick={() => setStep('checkout')} className="w-full bg-brand-600 hover:bg-brand-700 text-white py-3.5 rounded-lg font-bold transition flex justify-center items-center gap-2">
                 {t('proceedToCheckout')} <ArrowRight size={18}/>
               </button>
             ) : (
-              <button onClick={handleCheckout} disabled={loading} className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-lg font-bold transition flex justify-center items-center gap-2 disabled:bg-slate-400">
+              <button onClick={handleCheckout} disabled={loading} className="w-full bg-brand-600 hover:bg-brand-700 text-white py-3.5 rounded-lg font-bold transition flex justify-center items-center gap-2 disabled:bg-slate-400">
                 {loading ? t('processing') : t('placeOrder')} <ArrowRight size={18}/>
               </button>
             )}
