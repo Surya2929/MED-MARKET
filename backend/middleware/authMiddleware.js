@@ -3,29 +3,32 @@ import User from '../models/User.js';
 
 // 🚀 1. Protect Routes (For logged-in users only)
 export const protect = async (req, res, next) => {
-  let token;
-  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
-    try {
-      token = req.headers.authorization.split(' ')[1];
-      
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      
-      req.user = await User.findById(decoded.id).select('-password');
-      
-      // Check if user is blocked by Admin
-      if(req.user && req.user.isBlocked) {
-        return res.status(403).json({ message: 'Your account has been suspended by Admin.' });
-      }
-      
-      next();
-    } catch (error) {
-      console.error("Token Verification Error:", error.message);
-      res.status(401).json({ message: 'Not authorized, token failed' });
-    }
+  const auth = req.headers.authorization;
+  if (!auth || !auth.startsWith('Bearer ')) {
+    return res.status(401).json({ message: 'Not authorized, no token' });
   }
-  if (!token) {
-    res.status(401).json({ message: 'Not authorized, no token' });
+
+  try {
+    const token = auth.split(' ')[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = await User.findById(decoded.id).select('-password');
+  } catch (error) {
+    console.error("Token Verification Error:", error.message);
+    return res.status(401).json({ message: 'Not authorized, token failed' });
   }
+
+  // Token is valid but the account was deleted
+  if (!req.user) {
+    return res.status(401).json({ message: 'Not authorized, user not found' });
+  }
+
+  // Check if user is blocked by Admin
+  if (req.user.isBlocked) {
+    return res.status(403).json({ message: 'Your account has been suspended by Admin.' });
+  }
+
+  // Outside the try so errors thrown by the route handler aren't reported as "token failed"
+  next();
 };
 
 // 🚀 2. Vendor Only Access
