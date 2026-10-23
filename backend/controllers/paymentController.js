@@ -1,8 +1,7 @@
 import Razorpay from 'razorpay';
 import crypto from 'crypto';
 import Order from '../models/Order.js';
-import Inventory from '../models/Inventory.js';
-import { verifyCartItems } from './orderController.js';
+import { verifyCartItems, reserveStock, releaseStock } from './orderController.js';
 import { debitWallet } from './walletController.js';
 
 const razorpay = (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET)
@@ -18,19 +17,20 @@ setInterval(() => {
   }
 }, 10 * 60 * 1000);
 
+const refundPayment = async (paymentId, amountPaise, notes) => {
+  if (!razorpay) throw new Error('Online payments are not configured on the server.');
+  return razorpay.payments.refund(paymentId, { amount: amountPaise, notes });
+};
+
 // Refunds the part of an online-paid order that went through Razorpay (the wallet part is credited back separately).
 // Sets paymentStatus/razorpayRefundId on the order; the caller saves it. Throws if the gateway refund fails.
 export const refundOnlinePayment = async (order) => {
   if (order.paymentMethod !== 'Online' || order.paymentStatus !== 'Paid' || !order.razorpayPaymentId) return null;
-  if (!razorpay) throw new Error('Online payments are not configured on the server.');
 
   const amountPaise = Math.round((order.totalAmount - (order.walletUsed || 0)) * 100);
   if (amountPaise <= 0) return null;
 
-  const refund = await razorpay.payments.refund(order.razorpayPaymentId, {
-    amount: amountPaise,
-    notes: { orderId: order._id.toString(), reason: 'Order cancelled' }
-  });
+  const refund = await refundPayment(order.razorpayPaymentId, amountPaise, { orderId: order._id.toString(), reason: 'Order cancelled' });
   order.paymentStatus = 'Refunded';
   order.razorpayRefundId = refund.id;
   return refund;
@@ -99,44 +99,62 @@ export const verifyRazorpayPayment = async (req, res) => {
       return res.status(400).json({ message: 'Payment verification failed. If money was deducted, it will be auto-refunded within a few days.' });
     }
 
-    for (const item of pending.items) {
-      const inv = await Inventory.findOne({ storeId: pending.storeId, medicineId: item.medicineId });
-      if (!inv || inv.stock < item.quantity) {
-        pendingCheckouts.delete(razorpay_order_id);
-        return res.status(409).json({
-          message: 'Sorry, an item in your order sold out while you were paying. Please contact support with your payment ID for a refund.',
-          paymentId: razorpay_payment_id
-        });
+    // Claim this checkout before any await, so a duplicate verify call for the same payment can't create a second order
+    pendingCheckouts.delete(razorpay_order_id);
+
+    const paidAmount = pending.totalAmount - pending.walletUsed;
+
+    // The customer has already paid, so if we can't fulfil the order, give the money back instead of creating it.
+    const refundAndReject = async (status, reason, failedText) => {
+      let refundId = null;
+      try {
+        const refund = await refundPayment(razorpay_payment_id, Math.round(paidAmount * 100), { razorpayOrderId: razorpay_order_id, reason });
+        refundId = refund.id;
+      } catch (refundError) {
+        console.error('Razorpay refund error:', refundError?.error?.description || refundError.message, razorpay_payment_id);
       }
+      return res.status(status).json({
+        message: refundId
+          ? `${failedText} Your payment of ₹${paidAmount} has been refunded to your original payment method (usually 5-7 working days).`
+          : `${failedText} We could not refund your payment automatically. Please contact support with your payment ID.`,
+        paymentId: razorpay_payment_id,
+        refundId
+      });
+    };
+
+    try {
+      await reserveStock(pending.storeId, pending.items);
+    } catch (stockError) {
+      if (stockError.status !== 409) console.error('Stock reservation error:', stockError.message);
+      return refundAndReject(409, 'Out of stock after payment', 'Sorry, an item in your order sold out while you were paying.');
     }
 
-    const order = await Order.create({
-      customerId: pending.customerId,
-      storeId: pending.storeId,
-      deliveryAddress: pending.deliveryAddress,
-      prescriptionImage: pending.prescriptionImage,
-      items: pending.items,
-      totalAmount: pending.totalAmount,
-      walletUsed: pending.walletUsed,
-      status: 'Pending',
-      paymentMethod: 'Online',
-      paymentStatus: 'Paid',
-      razorpayOrderId: razorpay_order_id,
-      razorpayPaymentId: razorpay_payment_id
-    });
-
-    for (const item of pending.items) {
-      await Inventory.findOneAndUpdate(
-        { storeId: pending.storeId, medicineId: item.medicineId },
-        { $inc: { stock: -item.quantity } }
-      );
+    let order;
+    try {
+      order = await Order.create({
+        customerId: pending.customerId,
+        storeId: pending.storeId,
+        deliveryAddress: pending.deliveryAddress,
+        prescriptionImage: pending.prescriptionImage,
+        items: pending.items,
+        totalAmount: pending.totalAmount,
+        walletUsed: pending.walletUsed,
+        status: 'Pending',
+        paymentMethod: 'Online',
+        paymentStatus: 'Paid',
+        razorpayOrderId: razorpay_order_id,
+        razorpayPaymentId: razorpay_payment_id
+      });
+    } catch (createError) {
+      console.error('Order create error after payment:', createError.message);
+      await releaseStock(pending.storeId, pending.items);
+      return refundAndReject(500, 'Order could not be saved', 'Sorry, we could not place your order.');
     }
 
     if (pending.walletUsed > 0) {
       await debitWallet(pending.customerId, pending.walletUsed, `Used on Order #${order._id.toString().slice(-6)}`, order._id);
     }
 
-    pendingCheckouts.delete(razorpay_order_id);
     res.status(201).json(order);
   } catch (error) {
     res.status(500).json({ message: error.message });

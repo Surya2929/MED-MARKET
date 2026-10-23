@@ -14,6 +14,35 @@ const VENDOR_NEXT_STATUS = {
   'Out for Delivery': 'Delivered'
 };
 
+// Takes stock for every item. The `stock >= quantity` filter makes the check and the decrement one atomic
+// step, so two orders arriving together can never push stock below zero. If any item is short (or the DB
+// errors midway), the items already taken are put back and the error is rethrown.
+export const reserveStock = async (storeId, items) => {
+  const reserved = [];
+  try {
+    for (const item of items) {
+      const updated = await Inventory.findOneAndUpdate(
+        { storeId, medicineId: item.medicineId, stock: { $gte: item.quantity } },
+        { $inc: { stock: -item.quantity } }
+      );
+      if (!updated) throw { status: 409, message: 'Sorry, one of the items in your cart just went out of stock. Please update your cart and try again.' };
+      reserved.push(item);
+    }
+  } catch (error) {
+    await releaseStock(storeId, reserved);
+    throw error;
+  }
+};
+
+export const releaseStock = async (storeId, items) => {
+  for (const item of items) {
+    await Inventory.findOneAndUpdate(
+      { storeId, medicineId: item.medicineId },
+      { $inc: { stock: item.quantity } }
+    );
+  }
+};
+
 export const isValidAddress = (address) => {
   if (!address || address.trim().length < 15) return false;
   return /\b\d{6}\b/.test(address);
@@ -62,24 +91,25 @@ export const placeOrder = async (req, res) => {
       storeId, items, deliveryAddress, prescriptionImage, req.user._id, useWallet
     );
 
-    const order = await Order.create({
-      customerId: req.user._id,
-      storeId,
-      deliveryAddress,
-      prescriptionImage: prescriptionImage || null,
-      items: verifiedItems,
-      totalAmount,
-      walletUsed,
-      status: 'Pending',
-      paymentMethod: 'COD',
-      paymentStatus: 'Pending'
-    });
+    await reserveStock(storeId, verifiedItems);
 
-    for (const item of verifiedItems) {
-      await Inventory.findOneAndUpdate(
-        { storeId, medicineId: item.medicineId },
-        { $inc: { stock: -item.quantity } }
-      );
+    let order;
+    try {
+      order = await Order.create({
+        customerId: req.user._id,
+        storeId,
+        deliveryAddress,
+        prescriptionImage: prescriptionImage || null,
+        items: verifiedItems,
+        totalAmount,
+        walletUsed,
+        status: 'Pending',
+        paymentMethod: 'COD',
+        paymentStatus: 'Pending'
+      });
+    } catch (createError) {
+      await releaseStock(storeId, verifiedItems);
+      throw createError;
     }
 
     if (walletUsed > 0) {
