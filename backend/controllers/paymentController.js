@@ -18,6 +18,24 @@ setInterval(() => {
   }
 }, 10 * 60 * 1000);
 
+// Refunds the part of an online-paid order that went through Razorpay (the wallet part is credited back separately).
+// Sets paymentStatus/razorpayRefundId on the order; the caller saves it. Throws if the gateway refund fails.
+export const refundOnlinePayment = async (order) => {
+  if (order.paymentMethod !== 'Online' || order.paymentStatus !== 'Paid' || !order.razorpayPaymentId) return null;
+  if (!razorpay) throw new Error('Online payments are not configured on the server.');
+
+  const amountPaise = Math.round((order.totalAmount - (order.walletUsed || 0)) * 100);
+  if (amountPaise <= 0) return null;
+
+  const refund = await razorpay.payments.refund(order.razorpayPaymentId, {
+    amount: amountPaise,
+    notes: { orderId: order._id.toString(), reason: 'Order cancelled' }
+  });
+  order.paymentStatus = 'Refunded';
+  order.razorpayRefundId = refund.id;
+  return refund;
+};
+
 export const createRazorpayOrder = async (req, res) => {
   try {
     if (!razorpay) return res.status(500).json({ message: 'Online payments are not configured on the server yet.' });

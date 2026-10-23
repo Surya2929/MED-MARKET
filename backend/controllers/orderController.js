@@ -4,6 +4,15 @@ import Inventory from '../models/Inventory.js';
 import Medicine from '../models/Medicine.js';
 import User from '../models/User.js';
 import { creditWallet, debitWallet } from './walletController.js';
+import { refundOnlinePayment } from './paymentController.js';
+
+// Vendors can only move an order one step forward through fulfilment
+const VENDOR_NEXT_STATUS = {
+  'Pending': 'Accepted',
+  'Accepted': 'Packed',
+  'Packed': 'Out for Delivery',
+  'Out for Delivery': 'Delivered'
+};
 
 export const isValidAddress = (address) => {
   if (!address || address.trim().length < 15) return false;
@@ -118,12 +127,23 @@ export const updateOrderStatus = async (req, res) => {
     if (req.user.role === 'vendor') {
       const store = await Store.findOne({ vendorId: req.user._id });
       if (!store || order.storeId.toString() !== store._id.toString()) return res.status(403).json({ message: 'Not authorized' });
+      if (VENDOR_NEXT_STATUS[order.status] !== status) {
+        return res.status(400).json({ message: `Order is '${order.status}' and cannot be moved to '${status}'.` });
+      }
       order.status = status;
-    } 
+    }
     else if (req.user.role === 'customer') {
       if (order.customerId.toString() !== req.user._id.toString()) return res.status(403).json({ message: 'Not your order' });
       
       if (status === 'Cancelled' && (order.status === 'Pending' || order.status === 'Accepted')) {
+        // Refund the Razorpay part first; if the gateway refuses, leave the order untouched so the customer can retry
+        try {
+          await refundOnlinePayment(order);
+        } catch (refundError) {
+          console.error('Razorpay refund error:', refundError?.error?.description || refundError.message);
+          return res.status(502).json({ message: 'We could not start the refund for your online payment, so the order was not cancelled. Please try again in a few minutes.' });
+        }
+
         order.status = 'Cancelled';
         order.cancelReason = cancelReason;
 

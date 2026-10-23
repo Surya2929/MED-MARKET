@@ -20,6 +20,8 @@ import walletRoutes from './routes/walletRoutes.js';
 dotenv.config(); 
 
 const app = express();
+// Render puts one proxy in front of the app; trust it so req.ip (used by rate limiting) is the real client IP
+app.set('trust proxy', 1);
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));

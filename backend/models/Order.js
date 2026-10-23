@@ -31,9 +31,10 @@ const orderSchema = new mongoose.Schema({
   vendorReturnAction: { type: String, enum: ['Pending', 'Approved', 'Rejected'], default: 'Pending' },
   vendorRejectionReason: { type: String },
   paymentMethod: { type: String, enum: ['COD', 'Online'], default: 'COD' },
-  paymentStatus: { type: String, enum: ['Pending', 'Paid', 'Failed'], default: 'Pending' },
+  paymentStatus: { type: String, enum: ['Pending', 'Paid', 'Failed', 'Refunded'], default: 'Pending' },
   razorpayOrderId: { type: String },
-  razorpayPaymentId: { type: String }
+  razorpayPaymentId: { type: String },
+  razorpayRefundId: { type: String }
 }, { timestamps: true });
 
 export default mongoose.model('Order', orderSchema);

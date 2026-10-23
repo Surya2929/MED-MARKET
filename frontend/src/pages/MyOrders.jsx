@@ -34,7 +34,7 @@ const MyOrders = () => {
       alert(`${t('orderMarkedAs')} ${newStatus}`);
       fetchOrders(); // Refresh
     } catch (err) {
-      alert(t('failedToUpdateOrder'));
+      alert(err.response?.data?.message || t('failedToUpdateOrder'));
     }
   };
 
@@ -88,6 +88,16 @@ const MyOrders = () => {
                       <button onClick={() => setComplaintOrder(order)} className="text-xs font-bold text-slate-600 hover:text-slate-800 bg-slate-100 px-3 py-1.5 rounded-md border border-slate-200 transition flex items-center gap-1"><MessageSquare size={12}/> {t('reportIssue')}</button>
                     </div>
                   </div>
+
+                  {order.status === 'Cancelled' && order.paymentStatus === 'Refunded' && (
+                    <div className="mx-6 mt-4 bg-emerald-50 border border-emerald-200 rounded-lg p-3 flex gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5"/>
+                      <p className="text-xs text-emerald-800">
+                        <span className="font-bold">₹{order.totalAmount - (order.walletUsed || 0)}</span> refunded to your original payment method (usually 5-7 working days)
+                        {order.walletUsed > 0 && <> and <span className="font-bold">₹{order.walletUsed}</span> back to your MedMarket wallet</>}.
+                      </p>
+                    </div>
+                  )}
 
                   {/* 🚀 NEW: shows even after the order reverts to Delivered, so the customer knows why */}
                   {order.status === 'Delivered' && order.vendorReturnAction === 'Rejected' && order.vendorRejectionReason && (

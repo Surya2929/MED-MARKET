@@ -203,6 +203,7 @@ export const translateTexts = async (req, res) => {
     const { texts } = req.body;
     if (!Array.isArray(texts) || texts.length === 0) return res.status(400).json({ message: 'texts array is required' });
     if (texts.length > 100) return res.status(400).json({ message: 'Too many texts in one request (max 100).' });
+    if (texts.some(t => typeof t !== 'string' || t.length > 1000)) return res.status(400).json({ message: 'Each text must be a string of at most 1000 characters.' });
     if (!process.env.GROQ_API_KEY) return res.status(200).json({ translations: texts });
 
     const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
