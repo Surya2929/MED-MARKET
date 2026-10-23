@@ -1,9 +1,9 @@
+import 'dotenv/config'; // must stay first: loads .env before any module below reads process.env
 import dns from 'node:dns';
 dns.setServers(['8.8.8.8', '8.8.4.4']);
 console.log('✅ Google DNS configured');
 import express from 'express';
 import mongoose from 'mongoose';
-import dotenv from 'dotenv';
 import cors from 'cors';
 
 import authRoutes from './routes/authRoutes.js';
@@ -16,8 +16,6 @@ import reportRoutes from './routes/reportRoutes.js';
 import paymentRoutes from './routes/paymentRoutes.js';
 import addressRoutes from './routes/addressRoutes.js';
 import walletRoutes from './routes/walletRoutes.js';
-
-dotenv.config(); 
 
 const app = express();
 // Render puts one proxy in front of the app; trust it so req.ip (used by rate limiting) is the real client IP
