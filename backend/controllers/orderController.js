@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import Order from '../models/Order.js';
 import Store from '../models/Store.js'; 
 import Inventory from '../models/Inventory.js';
@@ -93,9 +94,22 @@ export const placeOrder = async (req, res) => {
 
     await reserveStock(storeId, verifiedItems);
 
+    // Take the wallet part before creating the order, so a failed debit never leaves a half-paid order behind
+    const orderId = new mongoose.Types.ObjectId();
+    const orderTag = `#${orderId.toString().slice(-6)}`;
+    if (walletUsed > 0) {
+      try {
+        await debitWallet(req.user._id, walletUsed, `Used on Order ${orderTag}`, orderId);
+      } catch (walletError) {
+        await releaseStock(storeId, verifiedItems);
+        throw walletError;
+      }
+    }
+
     let order;
     try {
       order = await Order.create({
+        _id: orderId,
         customerId: req.user._id,
         storeId,
         deliveryAddress,
@@ -109,11 +123,8 @@ export const placeOrder = async (req, res) => {
       });
     } catch (createError) {
       await releaseStock(storeId, verifiedItems);
+      if (walletUsed > 0) await creditWallet(req.user._id, walletUsed, `Reversed: Order ${orderTag} could not be placed`, orderId);
       throw createError;
-    }
-
-    if (walletUsed > 0) {
-      await debitWallet(req.user._id, walletUsed, `Used on Order #${order._id.toString().slice(-6)}`, order._id);
     }
 
     res.status(201).json(order);

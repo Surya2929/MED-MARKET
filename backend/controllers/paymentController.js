@@ -1,8 +1,9 @@
 import Razorpay from 'razorpay';
 import crypto from 'crypto';
+import mongoose from 'mongoose';
 import Order from '../models/Order.js';
 import { verifyCartItems, reserveStock, releaseStock } from './orderController.js';
-import { debitWallet } from './walletController.js';
+import { creditWallet, debitWallet } from './walletController.js';
 
 const razorpay = (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET)
   ? new Razorpay({ key_id: process.env.RAZORPAY_KEY_ID, key_secret: process.env.RAZORPAY_KEY_SECRET })
@@ -129,9 +130,23 @@ export const verifyRazorpayPayment = async (req, res) => {
       return refundAndReject(409, 'Out of stock after payment', 'Sorry, an item in your order sold out while you were paying.');
     }
 
+    // Take the wallet part before creating the order; the balance may have been spent elsewhere since checkout began
+    const orderId = new mongoose.Types.ObjectId();
+    const orderTag = `#${orderId.toString().slice(-6)}`;
+    if (pending.walletUsed > 0) {
+      try {
+        await debitWallet(pending.customerId, pending.walletUsed, `Used on Order ${orderTag}`, orderId);
+      } catch (walletError) {
+        if (walletError.status !== 409) console.error('Wallet debit error after payment:', walletError.message);
+        await releaseStock(pending.storeId, pending.items);
+        return refundAndReject(409, 'Wallet balance changed', 'Your wallet balance changed while you were paying, so the order was not placed.');
+      }
+    }
+
     let order;
     try {
       order = await Order.create({
+        _id: orderId,
         customerId: pending.customerId,
         storeId: pending.storeId,
         deliveryAddress: pending.deliveryAddress,
@@ -148,11 +163,8 @@ export const verifyRazorpayPayment = async (req, res) => {
     } catch (createError) {
       console.error('Order create error after payment:', createError.message);
       await releaseStock(pending.storeId, pending.items);
+      if (pending.walletUsed > 0) await creditWallet(pending.customerId, pending.walletUsed, `Reversed: Order ${orderTag} could not be placed`, orderId);
       return refundAndReject(500, 'Order could not be saved', 'Sorry, we could not place your order.');
-    }
-
-    if (pending.walletUsed > 0) {
-      await debitWallet(pending.customerId, pending.walletUsed, `Used on Order #${order._id.toString().slice(-6)}`, order._id);
     }
 
     res.status(201).json(order);
