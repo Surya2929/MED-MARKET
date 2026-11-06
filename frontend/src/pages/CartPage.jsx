@@ -158,7 +158,7 @@ const CartPage = () => {
   return (
     <div className="bg-slate-50 min-h-screen pb-20 font-sans">
 
-      <div className="bg-white border-b border-slate-200 sticky top-0 z-50 px-4 py-3 flex items-center justify-between shadow-sm">
+      <div className="bg-white border-b border-slate-200 sticky top-16 z-40 px-4 py-3 flex items-center justify-between shadow-sm">
         <button onClick={() => step === 'checkout' ? setStep('cart') : navigate(-1)} className="flex items-center gap-1 text-slate-600 hover:text-brand-600 font-semibold transition-colors">
           <ChevronLeft size={20}/> {step === 'checkout' ? t('backToCart') : t('continueShopping')}
         </button>
@@ -285,7 +285,7 @@ const CartPage = () => {
         </div>
 
         <div className="w-full lg:w-80">
-          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-lg sticky top-20">
+          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-lg sticky top-32">
             <h3 className="text-lg font-bold text-slate-800 border-b pb-3 mb-4 flex items-center gap-2"><Receipt size={20}/> {t('billDetails')}</h3>
             <div className="space-y-3 text-sm font-medium text-slate-600 mb-6">
               <div className="flex justify-between"><span>{t('itemTotal')}</span><span>₹{itemTotal}</span></div>

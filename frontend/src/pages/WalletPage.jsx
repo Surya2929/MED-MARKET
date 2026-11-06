@@ -22,7 +22,7 @@ const WalletPage = () => {
 
   return (
     <div className="bg-slate-50 min-h-screen pb-16 font-sans">
-      <div className="bg-white border-b border-slate-200 sticky top-0 z-40 px-4 py-3 flex items-center gap-2">
+      <div className="bg-white border-b border-slate-200 sticky top-16 z-40 px-4 py-3 flex items-center gap-2">
         <button onClick={() => navigate(-1)} className="p-1.5 hover:bg-slate-100 rounded-lg"><ChevronLeft size={20}/></button>
         <span className="text-sm font-bold text-slate-800">MedMarket Wallet</span>
       </div>

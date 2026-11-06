@@ -28,14 +28,24 @@ export const register = async (req, res) => {
   try {
     const { name, email, password, phone, role, storeName, address, storeType, licenseNumber } = req.body;
 
+    // 🚀 FIX: only customer or vendor can sign up — "admin" from the request body was accepted before
+    const safeRole = role === 'vendor' ? 'vendor' : 'customer';
+
+    if (!name || !email || !password) return res.status(400).json({ message: 'Name, email and password are required.' });
+    if (String(password).length < 6) return res.status(400).json({ message: 'Password must be at least 6 characters.' });
+    // Check store fields before creating the user, so a failed store save can't leave a vendor account without a store
+    if (safeRole === 'vendor' && (!address || !licenseNumber)) {
+      return res.status(400).json({ message: 'Store address and drug license number are required for pharmacies.' });
+    }
+
     const userExists = await User.findOne({ email });
     if (userExists) return res.status(400).json({ message: 'User already exists with this email.' });
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const user = await User.create({ name, email, password: hashedPassword, phone, role: role || 'customer' });
+    const user = await User.create({ name, email, password: hashedPassword, phone, role: safeRole });
 
-    if (role === 'vendor') {
+    if (safeRole === 'vendor') {
       await Store.create({
         vendorId: user._id,
         storeName: storeName || `${name}'s Store`,
@@ -143,7 +153,16 @@ export const resetPassword = async (req, res) => {
     const record = otpStore.get(phone);
     if (!record) return res.status(400).json({ message: 'OTP expired or not requested. Please request a new one.' });
     if (Date.now() > record.expiresAt) { otpStore.delete(phone); return res.status(400).json({ message: 'OTP has expired. Please request a new one.' }); }
-    if (record.otp !== otp) return res.status(400).json({ message: 'Incorrect OTP.' });
+    if (record.otp !== String(otp)) {
+      // 🚀 FIX: a 4-digit OTP could be brute-forced with unlimited tries; allow only 5 wrong attempts
+      record.attempts = (record.attempts || 0) + 1;
+      if (record.attempts >= 5) {
+        otpStore.delete(phone);
+        return res.status(400).json({ message: 'Too many wrong attempts. Please request a new OTP.' });
+      }
+      return res.status(400).json({ message: 'Incorrect OTP.' });
+    }
+    if (String(newPassword).length < 6) return res.status(400).json({ message: 'Password must be at least 6 characters.' });
 
     const user = await User.findOne({ phone });
     if (!user) return res.status(404).json({ message: 'No account found with this phone number.' });

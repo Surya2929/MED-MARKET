@@ -66,7 +66,7 @@ export const getAllUsers = async (req, res) => {
       if (user.role === 'customer') {
         const myOrders = orders.filter(o => o.customerId.toString() === user._id.toString());
         userData.totalOrders = myOrders.length;
-        userData.totalReturns = myOrders.filter(o => o.status === 'Return Requested').length;
+        userData.totalReturns = myOrders.filter(o => o.status === 'Return Requested' || o.status === 'Returned').length;
         userData.totalCancelled = myOrders.filter(o => o.status === 'Cancelled').length;
       }
       return userData;
@@ -102,6 +102,8 @@ export const rejectVendor = async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ message: 'User not found' });
+    // 🚀 FIX: this route deleted any account by id (even a customer); only pharmacy requests can be rejected
+    if (user.role !== 'vendor') return res.status(400).json({ message: 'Only pharmacy accounts can be rejected.' });
 
     await Store.findOneAndDelete({ vendorId: user._id });
     await User.findByIdAndDelete(req.params.id);

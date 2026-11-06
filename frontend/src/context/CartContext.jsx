@@ -22,15 +22,19 @@ export const CartProvider = ({ children }) => {
   }, [toast]);
 
   const addToCart = (item, qty) => {
+    // 🚀 Ek order sirf ek hi store se ho sakta hai (checkout single storeId use karta hai)
+    // FIX: the confirm used to run inside the setCart updater, which React may call twice (StrictMode),
+    // so the popup could appear twice — and the "Added" toast showed even after pressing Cancel.
+    const switchingStore = cart.length > 0 && String(cart[0].storeId) !== String(item.storeId);
+    if (switchingStore) {
+      const confirmSwitch = window.confirm(
+        `Your cart has items from "${cart[0].storeName}". Adding this item will clear your cart and start a new order from "${item.storeName}". Continue?`
+      );
+      if (!confirmSwitch) return;
+    }
+
     setCart((prev) => {
-      // 🚀 Ek order sirf ek hi store se ho sakta hai (checkout single storeId use karta hai)
-      if (prev.length > 0 && String(prev[0].storeId) !== String(item.storeId)) {
-        const confirmSwitch = window.confirm(
-          `Your cart has items from "${prev[0].storeName}". Adding this item will clear your cart and start a new order from "${item.storeName}". Continue?`
-        );
-        if (!confirmSwitch) return prev;
-        return [{ ...item, quantity: Math.min(qty, item.stock) }];
-      }
+      if (switchingStore) return [{ ...item, quantity: Math.min(qty, item.stock) }];
 
       const existing = prev.find((i) => i.inventoryId === item.inventoryId);
       if (existing) {

@@ -29,12 +29,17 @@ const ReturnRequestModal = ({ order, onClose, onSubmitted }) => {
     setSelected(prev => ({ ...prev, [medicineId]: clamped }));
   };
 
-  const estimatedRefund = order.items.reduce((sum, item) => {
+  const selectedTotal = order.items.reduce((sum, item) => {
     const medId = item.medicineId?._id || item.medicineId;
     const qty = selected[medId];
     if (qty === undefined) return sum;
     return sum + (item.price * qty);
   }, 0);
+  // Same rule as the server: an area discount on the order is taken off the refund in the same share
+  const orderItemTotal = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const estimatedRefund = order.areaDiscount > 0 && orderItemTotal > 0
+    ? Math.round(selectedTotal * (1 - order.areaDiscount / orderItemTotal))
+    : selectedTotal;
 
   const handlePhotoUpload = (e) => {
     const files = Array.from(e.target.files).slice(0, 5 - photos.length);

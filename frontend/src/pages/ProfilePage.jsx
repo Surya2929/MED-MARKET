@@ -5,7 +5,7 @@ import { LanguageContext } from '../context/LanguageContext';
 import { User, Phone, Lock, Store, MapPin, ShieldCheck, CheckCircle2 } from 'lucide-react';
 
 const ProfilePage = () => {
-  const { user } = useContext(AuthContext);
+  const { user, updateUser } = useContext(AuthContext);
   const { t } = useContext(LanguageContext);
   
   const [formData, setFormData] = useState({ name: '', phone: '', password: '' });
@@ -47,7 +47,8 @@ const ProfilePage = () => {
       const payload = user.role === 'vendor' ? { ...formData, ...storeData } : formData;
       const { data } = await API.put('/users/profile', payload);
       setMessage(data.message);
-      setFormData({ ...formData, password: '' }); 
+      setFormData({ ...formData, password: '' });
+      updateUser({ name: data.user.name, phone: data.user.phone });
     } catch (err) {
       setError(err.response?.data?.message || 'Error updating profile');
     } finally {

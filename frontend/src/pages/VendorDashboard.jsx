@@ -166,7 +166,7 @@ const VendorDashboard = () => {
     <div className="bg-slate-50 min-h-screen font-sans text-slate-800">
       
       {/* 🚀 COMPACT ADMIN NAVBAR */}
-      <nav className="bg-brand-700 text-white px-6 py-3 flex justify-between items-center sticky top-0 z-50 shadow-md">
+      <nav className="bg-brand-700 text-white px-6 py-3 flex justify-between items-center sticky top-16 z-40 shadow-md">
         <div className="flex items-center gap-3">
           <div className="bg-lime-accent text-brand-900 p-2 rounded-lg"><Store size={18}/></div>
           <div>

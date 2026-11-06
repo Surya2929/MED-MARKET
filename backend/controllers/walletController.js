@@ -22,6 +22,7 @@ export const creditWallet = async (userId, amount, description, orderId = null) 
 // Only debits if the balance still covers the amount (check + update in one atomic step),
 // so two orders placed at the same time can't take the wallet negative.
 export const debitWallet = async (userId, amount, description, orderId = null) => {
+  if (!(amount > 0)) throw { status: 400, message: 'Invalid wallet amount.' };
   const updated = await User.findOneAndUpdate(
     { _id: userId, walletBalance: { $gte: amount } },
     { $inc: { walletBalance: -amount } }

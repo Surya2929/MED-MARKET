@@ -28,7 +28,7 @@ const SubstituteList = ({ medicineId }) => {
   const handleAdd = (s) => {
     if (!user) { alert("Please login first."); navigate('/login'); return; }
     addToCart({
-      inventoryId: `${s.inventoryId}-unit`,
+      inventoryId: s.inventoryId,
       medicineId: s.medicineId,
       medicineName: s.name,
       storeId: s.storeId,

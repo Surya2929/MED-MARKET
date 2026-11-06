@@ -58,6 +58,9 @@ export const verifyCartItems = async (storeId, items, deliveryAddress, prescript
   const verifiedItems = [];
   let requiresPrescription = false;
   for (const item of items) {
+    // 🚀 FIX: a negative/zero/decimal quantity from a crafted request used to add stock back and make
+    // the total negative (and a negative wallet "debit" then added money to the wallet)
+    if (!Number.isInteger(item.quantity) || item.quantity < 1) throw { status: 400, message: 'Invalid quantity for one of the items.' };
     const inv = await Inventory.findOne({ storeId, medicineId: item.medicineId });
     if (!inv) throw { status: 400, message: 'One of the items is no longer available at this store.' };
     if (inv.stock < item.quantity) throw { status: 400, message: 'Only a few units are left in stock for one of your items. Please update your cart.' };

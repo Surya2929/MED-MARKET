@@ -66,6 +66,15 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // 🚀 Keeps the navbar (and the saved session) in sync after the profile is edited
+  const updateUser = (fields) => {
+    setUser(prev => {
+      const next = { ...prev, ...fields };
+      localStorage.setItem('userInfo', JSON.stringify(next));
+      return next;
+    });
+  };
+
   const logout = () => {
     setUser(null);
     localStorage.removeItem('userInfo');
@@ -74,7 +83,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, googleLogin, sendResetOtp, resetPassword, logout, checkingSession }}>
+    <AuthContext.Provider value={{ user, login, googleLogin, sendResetOtp, resetPassword, logout, updateUser, checkingSession }}>
       {children}
     </AuthContext.Provider>
   );

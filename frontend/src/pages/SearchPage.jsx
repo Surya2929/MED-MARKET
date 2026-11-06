@@ -5,7 +5,7 @@ import { CartContext } from '../context/CartContext';
 import { AuthContext } from '../context/AuthContext';
 import { LocationContext } from '../context/LocationContext';
 import { LanguageContext } from '../context/LanguageContext';
-import { Search, MapPin, ShieldCheck, ShoppingCart, Plus, Minus, Tag, Beaker, CheckCircle2, ChevronDown, ChevronUp, Bot, HeartPulse, Activity, Brain, Bone, Baby, LocateFixed, Lightbulb, Package, ArrowRight, StoreIcon, Truck, AlertTriangle, FileWarning, Stethoscope } from 'lucide-react';
+import { Search, MapPin, ShieldCheck, ShoppingCart, Plus, Minus, Tag, Beaker, ChevronDown, ChevronUp, Bot, HeartPulse, Activity, Brain, Bone, Baby, LocateFixed, Lightbulb, ArrowRight, StoreIcon, Truck, AlertTriangle, FileWarning, Stethoscope } from 'lucide-react';
 
 // 🚀 NEW: shared stock-display helper — never reveal exact low counts to browsing customers
 const getStockLabel = (stock, t) => {
@@ -17,16 +17,10 @@ const getStockLabel = (stock, t) => {
 const StoreRow = ({ store, item, isCheapest, onAdd, t, medType }) => {
   const [qty, setQty] = useState(1);
   
-  // 🚀 FIXED: Simplified Packaging Logic
-  let packages = null;
-  if (medType === 'liquid') packages = [ { label: '100ml Bottle', multiplier: 1 }, { label: '200ml Bottle', multiplier: 1.8 } ];
-  else if (medType === 'cream') packages = [ { label: '30g Tube', multiplier: 1 }, { label: '50g Tube', multiplier: 1.6 } ];
-  
-  const [selectedPkg, setSelectedPkg] = useState(packages ? packages[0] : null);
-  
-  // Simple Price Calculation
-  const basePrice = Math.max(1, Math.round(store.price)); 
-  const currentPrice = packages ? Math.round(basePrice * selectedPkg.multiplier) : basePrice;
+  // 🚀 FIX: the old 100ml/200ml (x1.8) and 30g/50g (x1.6) package picker changed the price shown in the cart,
+  // but the server always charges the store's listed price — so the bill and the real order total differed.
+  // Show the real listed price only.
+  const currentPrice = store.price;
 
   // 🚀 FIXED: Manual Typing for Quantity (with Stock Limit)
   const handleQtyChange = (e) => {
@@ -53,16 +47,7 @@ const StoreRow = ({ store, item, isCheapest, onAdd, t, medType }) => {
       </div>
 
       <div className="w-full sm:w-1/4 mb-4 sm:mb-0 flex justify-start sm:justify-center">
-        {packages ? (
-          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-md px-2 py-1">
-            <Package className="w-4 h-4 text-brand-500" />
-            <select value={selectedPkg.label} onChange={(e) => setSelectedPkg(packages.find(p => p.label === e.target.value))} className="bg-transparent text-xs font-bold text-slate-700 outline-none cursor-pointer max-w-[140px]">
-              {packages.map(p => <option key={p.label} value={p.label}>{p.label}</option>)}
-            </select>
-          </div>
-        ) : (
-          <div className="text-xs font-bold text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1 rounded-md border border-slate-200">Per Unit</div>
-        )}
+        <div className="text-xs font-bold text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1 rounded-md border border-slate-200">{medType === 'liquid' ? 'Per Bottle' : medType === 'cream' ? 'Per Tube' : 'Per Unit'}</div>
       </div>
       
       <div className="w-full sm:w-auto flex items-center justify-between sm:justify-end gap-5">
@@ -87,7 +72,7 @@ const StoreRow = ({ store, item, isCheapest, onAdd, t, medType }) => {
             <button onClick={() => setQty(q => Math.min(store.stock, (parseInt(q)||0) + 1))} className="px-2 text-slate-500 hover:bg-slate-50 h-full border-l"><Plus className="w-3 h-3" /></button>
           </div>
 
-          <button onClick={() => onAdd(store, item, qty || 1, selectedPkg ? selectedPkg.label : 'Per Unit', currentPrice)} className="bg-brand-600 hover:bg-brand-700 text-white px-3 h-8 rounded-full transition-all shadow-sm text-xs font-semibold flex items-center gap-1.5">
+          <button onClick={() => onAdd(store, item, qty || 1)} className="bg-brand-600 hover:bg-brand-700 text-white px-3 h-8 rounded-full transition-all shadow-sm text-xs font-semibold flex items-center gap-1.5">
             <ShoppingCart className="w-3.5 h-3.5"/> {t('add')}
           </button>
         </div>
@@ -310,9 +295,9 @@ const SearchPage = () => {
 
   const handleSearch = (e) => { e.preventDefault(); if (query.trim()) triggerSearch(query); };
 
-  const handleAddToCart = (store, item, qty, packageLabel, finalPrice) => {
+  const handleAddToCart = (store, item, qty) => {
     if (!user) { alert("Please login first."); navigate('/login'); return; }
-    addToCart({ inventoryId: `${store.inventoryId}-${packageLabel}`, medicineId: item.medicineInfo._id, medicineName: `${item.medicineInfo.name} (${packageLabel})`, storeId: store.storeId, storeName: store.storeName, price: finalPrice, stock: store.stock, imageUrl: item.medicineInfo.imageUrl, prescriptionRequired: !!item.medicineInfo.prescriptionRequired }, qty);
+    addToCart({ inventoryId: store.inventoryId, medicineId: item.medicineInfo._id, medicineName: item.medicineInfo.name, storeId: store.storeId, storeName: store.storeName, price: store.price, stock: store.stock, imageUrl: item.medicineInfo.imageUrl, prescriptionRequired: !!item.medicineInfo.prescriptionRequired }, qty);
   };
 
   const healthCategories = [

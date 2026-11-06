@@ -4,6 +4,13 @@ import Store from '../models/Store.js';
 import Groq from 'groq-sdk';
 import mongoose from 'mongoose';
 
+// 🚀 FIX: user text was used as a raw regex, so "Vitamin C (500mg)" or "(" broke search (500) and
+// matching of existing medicine names. Escape special characters first.
+const escapeRegex = (text) => String(text).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+// Custom medicines added without a salt get this placeholder; they must never count as "same salt"
+const PLACEHOLDER_COMPOSITION = 'General Composition';
+
 export const addMasterMedicine = async (req, res) => {
   try {
     const { 
@@ -13,15 +20,17 @@ export const addMasterMedicine = async (req, res) => {
     
     if (!name) return res.status(400).json({ message: 'Medicine name is required' });
 
-    let medicine = await Medicine.findOne({ name: { $regex: new RegExp(`^${name}$`, 'i') } });
-    
+    let medicine = await Medicine.findOne({ name: { $regex: new RegExp(`^${escapeRegex(name.trim())}$`, 'i') } });
+
     if (medicine) {
       medicine.manufacturer = manufacturer || medicine.manufacturer;
       medicine.manufactureDate = manufactureDate || medicine.manufactureDate;
       medicine.expiryDate = expiryDate || medicine.expiryDate;
       medicine.imageUrl = imageUrl || medicine.imageUrl;
       medicine.uses = uses || medicine.uses;
-      if (typeof prescriptionRequired === 'boolean') medicine.prescriptionRequired = prescriptionRequired;
+      // 🚀 FIX: this record is shared by every pharmacy, so a vendor may mark it as needing a prescription
+      // but never remove that flag (before, re-adding the name with the default `false` cleared it for everyone)
+      if (prescriptionRequired === true) medicine.prescriptionRequired = true;
       await medicine.save();
       return res.status(200).json(medicine); 
     }
@@ -48,12 +57,21 @@ export const addMasterMedicine = async (req, res) => {
 export const addVendorInventory = async (req, res) => {
   try {
     const { medicineId, price, stock } = req.body;
+    // 🚀 FIX: price/stock were saved as sent, so a negative or blank value could be listed
+    const priceNum = Number(price);
+    const stockNum = Number(stock);
+    if (!(priceNum > 0)) return res.status(400).json({ message: 'Price must be more than 0.' });
+    if (!Number.isInteger(stockNum) || stockNum < 0) return res.status(400).json({ message: 'Stock must be a whole number (0 or more).' });
+    if (!mongoose.isValidObjectId(medicineId) || !(await Medicine.exists({ _id: medicineId }))) {
+      return res.status(404).json({ message: 'Medicine not found.' });
+    }
+
     const store = await Store.findOne({ vendorId: req.user._id });
     if (!store) return res.status(404).json({ message: 'Store not found for this vendor' });
 
     const inventory = await Inventory.findOneAndUpdate(
       { storeId: store._id, medicineId },
-      { price, stock },
+      { price: priceNum, stock: stockNum },
       { new: true, upsert: true }
     ).populate('medicineId');
     res.status(200).json(inventory);
@@ -100,19 +118,19 @@ export const searchAndCompare = async (req, res) => {
     let { q: searchQuery, city } = req.query; 
     if (!searchQuery) return res.status(400).json({ message: 'Search query is required' });
 
-    searchQuery = String(searchQuery).trim();
+    searchQuery = escapeRegex(String(searchQuery).trim());
 
     let exactMedicines = await Medicine.find({
       $or: [
         { name: { $regex: searchQuery, $options: 'i' } },
-        { composition: { $regex: searchQuery, $options: 'i' } } 
+        { composition: { $regex: searchQuery, $options: 'i' } }
       ]
     });
 
     if (exactMedicines.length === 0) return res.status(404).json({ message: 'No medicines found' });
 
     const exactMedicineIds = exactMedicines.map(med => med._id);
-    const compositions = exactMedicines.map(med => med.composition);
+    const compositions = exactMedicines.map(med => med.composition).filter(c => c !== PLACEHOLDER_COMPOSITION);
 
     const alternativeMedicines = await Medicine.find({
       composition: { $in: compositions },
@@ -177,6 +195,8 @@ export const getSubstitutes = async (req, res) => {
     if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ message: 'Medicine not found' });
     const med = await Medicine.findById(req.params.id);
     if (!med) return res.status(404).json({ message: 'Medicine not found' });
+    // A medicine with no real salt listed has no safe substitutes
+    if (med.composition === PLACEHOLDER_COMPOSITION) return res.status(200).json({ basePrice: med.defaultPrice, outOfStock: false, substitutes: [] });
 
     const sameSalt = await Medicine.find({ composition: med.composition });
     const ids = sameSalt.map(m => m._id);
@@ -245,8 +265,9 @@ export const getSuggestions = async (req, res) => {
     const { q } = req.query;
     if (!q || q.length < 2) return res.status(200).json([]); 
 
+    const safeQ = escapeRegex(q);
     const suggestions = await Medicine.find({
-      $or: [{ name: { $regex: q, $options: 'i' } }, { composition: { $regex: q, $options: 'i' } }]
+      $or: [{ name: { $regex: safeQ, $options: 'i' } }, { composition: { $regex: safeQ, $options: 'i' } }]
     }).select('name composition').limit(6); 
 
     res.status(200).json(suggestions);

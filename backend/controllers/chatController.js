@@ -1,6 +1,14 @@
 import Groq from 'groq-sdk';
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+// 🚀 FIX: creating the client at import time crashed the whole server on start when GROQ_API_KEY was missing.
+// Create it on first use instead, and answer with a clear message if the key is not set.
+let groq = null;
+const getGroq = () => {
+  if (!process.env.GROQ_API_KEY) return null;
+  if (!groq) groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+  return groq;
+};
+const NO_KEY_REPLY = 'AI assistant is not configured on the server yet.';
 
 const SYMPTOM_SYSTEM_PROMPT = `You are "Dr. MedMarket", a knowledgeable and careful AI health assistant inside an Indian online pharmacy app. Customers will describe ANY symptom or illness — common or uncommon — and expect a genuinely useful, complete answer, not just a one-line medicine name.
 
@@ -38,8 +46,9 @@ export const askAI = async (req, res) => {
   try {
     const { prompt } = req.body;
     if (!prompt || !prompt.trim()) return res.status(400).json({ message: 'Message cannot be empty.' });
+    if (!getGroq()) return res.status(503).json({ reply: NO_KEY_REPLY });
 
-    const chatCompletion = await groq.chat.completions.create({
+    const chatCompletion = await getGroq().chat.completions.create({
       messages: [
         { role: 'system', content: SYMPTOM_SYSTEM_PROMPT },
         { role: 'user', content: prompt }
@@ -60,8 +69,9 @@ export const checkInteraction = async (req, res) => {
   try {
     const { med1, med2 } = req.body;
     if (!med1 || !med2) return res.status(400).json({ message: 'Both medicine names are required.' });
+    if (!getGroq()) return res.status(503).json({ reply: NO_KEY_REPLY });
 
-    const chatCompletion = await groq.chat.completions.create({
+    const chatCompletion = await getGroq().chat.completions.create({
       messages: [
         { role: 'system', content: INTERACTION_SYSTEM_PROMPT },
         { role: 'user', content: `Medicine 1: ${med1}\nMedicine 2: ${med2}` }

@@ -84,7 +84,7 @@ const MedicineDetail = () => {
   const handleAdd = (store, qty) => {
     if (!user) { alert("Please login first."); navigate('/login'); return; }
     addToCart({
-      inventoryId: `${store.inventoryId}-unit`,
+      inventoryId: store.inventoryId,
       medicineId: medicine._id,
       medicineName: medicine.name,
       storeId: store.storeId,
@@ -100,7 +100,7 @@ const MedicineDetail = () => {
   return (
     <div className="bg-slate-50 min-h-screen pb-20 font-sans">
 
-      <div className="bg-white border-b border-slate-200 sticky top-0 z-50 px-4 py-3 flex items-center justify-between shadow-sm">
+      <div className="bg-white border-b border-slate-200 sticky top-16 z-40 px-4 py-3 flex items-center justify-between shadow-sm">
         <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-slate-600 hover:text-brand-600 font-semibold transition-colors bg-slate-100 px-3 py-1.5 rounded-lg">
           <ChevronLeft size={18}/> Back
         </button>
