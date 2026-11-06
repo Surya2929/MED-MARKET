@@ -26,12 +26,12 @@ export const AuthProvider = ({ children }) => {
     verifySession();
   }, []);
 
-  const login = async (email, password) => {
+  const login = async (email, password, role) => {
     try {
-      const { data } = await API.post('/auth/login', { email, password });
+      const { data } = await API.post('/auth/login', { email, password, role });
       setUser(data);
       localStorage.setItem('userInfo', JSON.stringify(data));
-      return { success: true };
+      return { success: true, role: data.role };
     } catch (error) {
       return { success: false, message: error.response?.data?.message || 'Login failed' };
     }

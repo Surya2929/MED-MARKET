@@ -16,6 +16,14 @@ const generateToken = (id) => {
 
 const generateOtp = () => Math.floor(1000 + Math.random() * 9000).toString(); // 4-digit
 
+// The login page has Customer / Pharmacy / Admin tabs; reject an account used on the wrong tab
+const ROLE_LABELS = { customer: 'Customer', vendor: 'Pharmacy', admin: 'Admin' };
+const wrongTabMessage = (user, expectedRole) => {
+  if (!expectedRole || !ROLE_LABELS[expectedRole] || user.role === expectedRole) return null;
+  const label = ROLE_LABELS[user.role] || user.role;
+  return `This is ${/^[AEIOU]/.test(label) ? 'an' : 'a'} ${label} account. Please sign in from the ${label} tab.`;
+};
+
 export const register = async (req, res) => {
   try {
     const { name, email, password, phone, role, storeName, address, storeType, licenseNumber } = req.body;
@@ -50,12 +58,16 @@ export const register = async (req, res) => {
 // 🚀 Standard email + password login
 export const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, role } = req.body;
     const user = await User.findOne({ email });
     if (!user) return res.status(401).json({ message: 'Invalid email or password.' });
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(401).json({ message: 'Invalid email or password.' });
+
+    // Checked only after the password matches, so the role of an account is never revealed to a wrong-password attempt
+    const tabError = wrongTabMessage(user, role);
+    if (tabError) return res.status(403).json({ message: tabError });
 
     if (user.isBlocked) return res.status(403).json({ message: 'Your account has been suspended. Please contact support.' });
 
@@ -84,6 +96,10 @@ export const googleLogin = async (req, res) => {
       const randomPassword = await bcrypt.hash(Math.random().toString(36), 10);
       user = await User.create({ name, email, password: randomPassword, phone: '', role: 'customer' });
     }
+
+    // Google Sign-In is only offered on the Customer tab
+    const tabError = wrongTabMessage(user, 'customer');
+    if (tabError) return res.status(403).json({ message: tabError });
 
     if (user.isBlocked) return res.status(403).json({ message: 'Your account has been suspended. Please contact support.' });
 

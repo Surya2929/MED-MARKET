@@ -24,12 +24,14 @@ const Login = () => {
 
   const googleBtnRef = useRef(null);
 
+  const homeForRole = { customer: '/search', vendor: '/vendor-dashboard', admin: '/admin' };
+
   const handleEmailLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
-    const result = await login(email, password);
+    const result = await login(email, password, roleTab);
     setLoading(false);
-    if (result.success) navigate('/search');
+    if (result.success) navigate(homeForRole[result.role] || '/search');
     else alert(result.message);
   };
 
