@@ -11,9 +11,14 @@ import {
   getSubstitutes
 } from '../controllers/medicineController.js';
 import { protect, vendorOnly } from '../middleware/authMiddleware.js';
+import { checkObjectId } from '../middleware/validateId.js';
 import { translateLimiter } from '../middleware/rateLimit.js';
 
 const router = express.Router();
+
+// 🚀 Invalid MongoDB ids get a 400 instead of a 500
+router.param('id', checkObjectId);
+router.param('medicineId', checkObjectId);
 
 router.get('/search', searchAndCompare);
 router.get('/stores', getNearbyStores);

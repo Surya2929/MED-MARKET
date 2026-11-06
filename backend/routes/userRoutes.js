@@ -10,8 +10,13 @@ import {
   toggleBlockInventory
 } from '../controllers/userController.js';
 import { protect, adminOnly } from '../middleware/authMiddleware.js';
+import { checkObjectId } from '../middleware/validateId.js';
 
 const router = express.Router();
+
+// 🚀 Invalid MongoDB ids get a 400 instead of a 500
+router.param('id', checkObjectId);
+router.param('storeId', checkObjectId);
 
 router.route('/profile')
   .get(protect, getUserProfile)

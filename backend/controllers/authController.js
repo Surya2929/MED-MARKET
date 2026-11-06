@@ -129,8 +129,10 @@ export const sendOtp = async (req, res) => {
     const { phone } = req.body;
     if (!phone || !/^\d{10}$/.test(phone)) return res.status(400).json({ message: 'Enter a valid 10-digit phone number.' });
 
+    // 🚀 FIX: same reply whether or not the number is registered, so nobody can check which numbers have accounts
+    const sameReply = { message: 'If this number is registered, an OTP has been sent to it.' };
     const user = await User.findOne({ phone });
-    if (!user) return res.status(404).json({ message: 'No account found with this phone number.' });
+    if (!user) return res.status(200).json(sameReply);
 
     const otp = generateOtp();
     otpStore.set(phone, { otp, expiresAt: Date.now() + 5 * 60 * 1000 }); // 5-minute expiry
@@ -138,7 +140,7 @@ export const sendOtp = async (req, res) => {
     // 🚧 No real SMS gateway connected yet — OTP is logged here for testing purposes only.
     console.log(`🔑 Password reset OTP for ${phone}: ${otp}`);
 
-    res.status(200).json({ message: 'OTP sent to your registered phone number.' });
+    res.status(200).json(sameReply);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import Report from '../models/Report.js';
 import Order from '../models/Order.js';
 import Store from '../models/Store.js';
@@ -17,6 +18,7 @@ export const createReport = async (req, res) => {
   try {
     const { orderId, reason, description } = req.body;
     if (!orderId || !reason || !description) return res.status(400).json({ message: 'orderId, reason and description are required.' });
+    if (!mongoose.isValidObjectId(orderId)) return res.status(400).json({ message: 'Invalid ID.' });
 
     const order = await Order.findById(orderId).populate('storeId');
     if (!order) return res.status(404).json({ message: 'Order not found.' });

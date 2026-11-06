@@ -53,6 +53,9 @@ export const isValidAddress = (address) => {
 export const verifyCartItems = async (storeId, items, deliveryAddress, prescriptionImage, userId = null, useWallet = false) => {
   if (!items || items.length === 0) throw { status: 400, message: 'No order items' };
   if (!storeId) throw { status: 400, message: 'Store ID is missing.' };
+  if (!mongoose.isValidObjectId(storeId) || items.some(i => !mongoose.isValidObjectId(i.medicineId))) {
+    throw { status: 400, message: 'Invalid ID.' };
+  }
   if (!isValidAddress(deliveryAddress)) throw { status: 400, message: 'Please enter a complete delivery address including a valid 6-digit PIN code.' };
 
   const verifiedItems = [];
@@ -179,6 +182,8 @@ export const updateOrderStatus = async (req, res) => {
         return res.status(400).json({ message: `Order is '${order.status}' and cannot be moved to '${status}'.` });
       }
       order.status = status;
+      // 🚀 Cash on Delivery is collected at the door, so a delivered COD order is paid
+      if (status === 'Delivered' && order.paymentMethod === 'COD') order.paymentStatus = 'Paid';
     }
     else if (req.user.role === 'customer') {
       if (order.customerId.toString() !== req.user._id.toString()) return res.status(403).json({ message: 'Not your order' });

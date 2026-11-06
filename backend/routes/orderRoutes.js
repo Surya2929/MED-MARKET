@@ -1,8 +1,12 @@
 import express from 'express';
 import { placeOrder, getMyOrders, getVendorOrders, updateOrderStatus, handleReturnDecision } from '../controllers/orderController.js';
 import { protect, vendorOnly } from '../middleware/authMiddleware.js';
+import { checkObjectId } from '../middleware/validateId.js';
 
 const router = express.Router();
+
+// 🚀 Invalid MongoDB ids get a 400 instead of a 500
+router.param('id', checkObjectId);
 
 router.post('/', protect, placeOrder);
 router.get('/myorders', protect, getMyOrders);

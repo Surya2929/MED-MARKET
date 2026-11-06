@@ -53,7 +53,7 @@ const Login = () => {
     setResetLoading(true);
     const result = await sendResetOtp(resetPhone);
     setResetLoading(false);
-    if (result.success) { setResetStep('otp'); alert('OTP sent to your registered phone number.'); }
+    if (result.success) { setResetStep('otp'); alert('If this number is registered, an OTP has been sent to it.'); }
     else alert(result.message);
   };
 
