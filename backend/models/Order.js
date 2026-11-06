@@ -12,6 +12,7 @@ const orderSchema = new mongoose.Schema({
   ],
   totalAmount: { type: Number, required: true },
   walletUsed: { type: Number, default: 0 },
+  areaDiscount: { type: Number, default: 0 },
   deliveryAddress: { type: String, required: true }, 
   prescriptionImage: { type: String },
   status: { 

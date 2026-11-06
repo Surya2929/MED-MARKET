@@ -2,6 +2,7 @@ import Medicine from '../models/Medicine.js';
 import Inventory from '../models/Inventory.js';
 import Store from '../models/Store.js';
 import Groq from 'groq-sdk';
+import mongoose from 'mongoose';
 
 export const addMasterMedicine = async (req, res) => {
   try {
@@ -136,7 +137,9 @@ export const searchAndCompare = async (req, res) => {
     // 🚀 Sort ascending by price — this is what makes the cheapest store appear first in each tab
     inventoryResults.sort((a, b) => a.price - b.price);
 
-    const formatResults = (medicinesList) => {
+    // 🚀 keepEmpty = true keeps medicines with zero stock (used for the exact search match, so its
+    // details page can still open and show substitutes). Similar results still hide zero-stock items.
+    const formatResults = (medicinesList, keepEmpty = false) => {
       return medicinesList.map(med => {
         const availableStores = inventoryResults.filter(
           inv => inv.medicineId && inv.medicineId._id.toString() === med._id.toString() && inv.stock > 0 
@@ -159,10 +162,64 @@ export const searchAndCompare = async (req, res) => {
             }))
           }
         };
-      }).filter(item => item.stores.local.length > 0 || item.stores.online.length > 0); 
+      }).filter(item => keepEmpty || item.stores.local.length > 0 || item.stores.online.length > 0);
     };
 
-    res.status(200).json({ exactMatches: formatResults(exactMedicines), alternatives: formatResults(alternativeMedicines) });
+    res.status(200).json({ exactMatches: formatResults(exactMedicines, true), alternatives: formatResults(alternativeMedicines) });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// 🚀 GENERIC SUBSTITUTES: other medicines with the same salt (composition), cheapest store first
+export const getSubstitutes = async (req, res) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ message: 'Medicine not found' });
+    const med = await Medicine.findById(req.params.id);
+    if (!med) return res.status(404).json({ message: 'Medicine not found' });
+
+    const sameSalt = await Medicine.find({ composition: med.composition });
+    const ids = sameSalt.map(m => m._id);
+
+    // Stock of all of them in one query
+    const rows = await Inventory.find({ medicineId: { $in: ids }, stock: { $gt: 0 } })
+      .populate({ path: 'storeId', select: 'storeName isVerified vendorId', populate: { path: 'vendorId', select: 'isBlocked' } });
+
+    // Same rules as search: verified store, listing not blocked, vendor not blocked
+    const validRows = rows.filter(r => r.storeId && r.storeId.isVerified && !r.isBlocked && !r.storeId.vendorId?.isBlocked);
+
+    const cheapestRow = (medicineId) => {
+      const list = validRows.filter(r => r.medicineId.equals(medicineId));
+      if (list.length === 0) return null;
+      return list.reduce((best, r) => (r.price < best.price ? r : best));
+    };
+
+    const ownRow = cheapestRow(med._id);
+    const basePrice = ownRow ? ownRow.price : med.defaultPrice;
+
+    const substitutes = [];
+    for (const other of sameSalt) {
+      if (other._id.equals(med._id)) continue;
+      const row = cheapestRow(other._id);
+      if (!row) continue;
+
+      substitutes.push({
+        medicineId: other._id,
+        name: other.name,
+        manufacturer: other.manufacturer,
+        imageUrl: other.imageUrl,
+        prescriptionRequired: other.prescriptionRequired,
+        inventoryId: row._id,
+        storeId: row.storeId._id,
+        storeName: row.storeId.storeName,
+        price: row.price,
+        stock: row.stock,
+        savings: basePrice > 0 ? Math.round(((basePrice - row.price) / basePrice) * 100) : 0
+      });
+    }
+
+    substitutes.sort((a, b) => a.price - b.price);
+    res.status(200).json({ basePrice, outOfStock: !ownRow, substitutes });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

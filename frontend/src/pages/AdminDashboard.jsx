@@ -2,8 +2,9 @@ import { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import API from '../services/api';
-import { ShieldAlert, Users, Store, ShieldCheck, Ban, AlertTriangle, MapPin, FileText, Phone, Mail, Clock, Check, X, CheckCircle2, PackageOpen, Package, AlertOctagon, MessageSquare, ArrowUpDown, RotateCcw } from 'lucide-react';
+import { ShieldAlert, Users, Store, ShieldCheck, Ban, AlertTriangle, MapPin, FileText, Phone, Mail, Clock, Check, X, CheckCircle2, PackageOpen, Package, AlertOctagon, MessageSquare, ArrowUpDown, RotateCcw, BadgePercent } from 'lucide-react';
 import ComplaintChat from '../components/ComplaintChat';
+import AreaDiscountManager from '../components/AreaDiscountManager';
 
 const AdminDashboard = () => {
   const { user } = useContext(AuthContext);
@@ -191,6 +192,7 @@ const AdminDashboard = () => {
             <AlertOctagon className="w-4 h-4"/> Complaints
             {pendingReports > 0 && <span className={`px-1.5 rounded-full text-[10px] ${activeTab === 'reports' ? 'bg-white text-rose-600' : 'bg-rose-500 text-white'}`}>{pendingReports}</span>}
           </button>
+          <button onClick={() => setActiveTab('discounts')} className={`px-6 py-2.5 rounded-lg font-bold text-sm transition-all flex items-center gap-2 shrink-0 ${activeTab === 'discounts' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}><BadgePercent className="w-4 h-4" /> Discounts</button>
         </div>
 
         {/* 🚀 TAB 1: VENDORS */}
@@ -354,6 +356,9 @@ const AdminDashboard = () => {
              </table>
           </div>
         )}
+
+        {/* 🚀 TAB 4: AREA DISCOUNTS */}
+        {activeTab === 'discounts' && <AreaDiscountManager />}
 
       </div>
 

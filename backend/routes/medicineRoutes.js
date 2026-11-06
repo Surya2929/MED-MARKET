@@ -7,7 +7,8 @@ import {
   getSuggestions, 
   deleteVendorInventory,
   getMasterMedicines, // 🚀 FIX: IMPORTED
-  translateTexts
+  translateTexts,
+  getSubstitutes
 } from '../controllers/medicineController.js';
 import { protect, vendorOnly } from '../middleware/authMiddleware.js';
 import { translateLimiter } from '../middleware/rateLimit.js';
@@ -22,5 +23,7 @@ router.get('/master', getMasterMedicines); // 🚀 FIX: DICTIONARY ROUTE
 router.post('/master', protect, vendorOnly, addMasterMedicine);
 router.delete('/vendor-inventory/:medicineId', protect, vendorOnly, deleteVendorInventory);
 router.post('/translate', translateLimiter, translateTexts);
+// Kept after the fixed paths above (/search, /stores, /master...) so ":id" never swallows them
+router.get('/:id/substitutes', getSubstitutes);
 
 export default router;

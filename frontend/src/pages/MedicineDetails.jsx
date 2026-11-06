@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { CartContext } from '../context/CartContext';
 import { AuthContext } from '../context/AuthContext';
 import { LanguageContext } from '../context/LanguageContext';
+import SubstituteList from '../components/SubstitutesList';
 import { ChevronLeft, ShoppingCart, ShieldCheck, Building2, FlaskConical, Calendar, AlertCircle, ImageOff, StoreIcon, Truck, MapPin, Minus, Plus, FileWarning } from 'lucide-react';
 
 const getStockLabel = (stock, t) => {
@@ -187,6 +188,8 @@ const MedicineDetail = () => {
             </div>
           </div>
         </div>
+
+        <SubstituteList medicineId={medicine._id} />
 
         {(localStores.length > 0 || onlineStores.length > 0) && (
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 mt-6 p-6">

@@ -5,7 +5,7 @@ import { LanguageContext } from '../context/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import API from '../services/api';
 import AddressSelector from '../components/AddressSelector';
-import { ChevronLeft, Trash2, ShoppingBag, ArrowRight, MapPin, UploadCloud, X, Receipt, FileWarning, Truck, CreditCard, Wallet } from 'lucide-react';
+import { ChevronLeft, Trash2, ShoppingBag, ArrowRight, MapPin, UploadCloud, X, Receipt, FileWarning, Truck, CreditCard, Wallet, BadgePercent } from 'lucide-react';
 
 const CartPage = () => {
   const { cart, removeFromCart, clearCart, updateQuantity } = useContext(CartContext);
@@ -32,9 +32,22 @@ const CartPage = () => {
     if (user) fetchWallet();
   }, [user]);
 
+  // 🚀 Area discount: check the selected address's pincode (the server applies the same % when the order is placed)
+  const [areaCheck, setAreaCheck] = useState({ pincode: null, percent: 0 });
+  const selectedPincode = selectedAddress?.pincode;
+  useEffect(() => {
+    if (!user || !/^\d{6}$/.test(String(selectedPincode || ''))) return;
+    API.get(`/area-discounts/check/${selectedPincode}`)
+      .then(({ data }) => setAreaCheck({ pincode: selectedPincode, percent: data.percent || 0 }))
+      .catch(() => setAreaCheck({ pincode: selectedPincode, percent: 0 }));
+  }, [selectedPincode, user]);
+  // Only use the result if it belongs to the address selected right now
+  const areaPercent = areaCheck.pincode === selectedPincode ? areaCheck.percent : 0;
+
   const itemTotal = cart.reduce((acc, i) => acc + (i.price * i.quantity), 0);
   const deliveryFee = itemTotal > 500 ? 0 : 40;
-  const totalAmount = itemTotal + deliveryFee;
+  const areaDiscount = Math.round(itemTotal * areaPercent / 100);
+  const totalAmount = itemTotal - areaDiscount + deliveryFee;
 
   const walletDeduction = useWallet ? Math.min(walletBalance, totalAmount) : 0;
   const payableAmount = totalAmount - walletDeduction;
@@ -276,6 +289,9 @@ const CartPage = () => {
             <h3 className="text-lg font-bold text-slate-800 border-b pb-3 mb-4 flex items-center gap-2"><Receipt size={20}/> {t('billDetails')}</h3>
             <div className="space-y-3 text-sm font-medium text-slate-600 mb-6">
               <div className="flex justify-between"><span>{t('itemTotal')}</span><span>₹{itemTotal}</span></div>
+              {areaDiscount > 0 && (
+                <div className="flex justify-between text-emerald-600"><span className="flex items-center gap-1"><BadgePercent size={14}/> Area Discount ({areaPercent}%)</span><span>-₹{areaDiscount}</span></div>
+              )}
               <div className="flex justify-between"><span>{t('deliveryFee')}</span><span className="text-emerald-600 font-bold">{deliveryFee === 0 ? t('free') : `₹${deliveryFee}`}</span></div>
               {step === 'checkout' && walletDeduction > 0 && (
                 <div className="flex justify-between text-emerald-600"><span className="flex items-center gap-1"><Wallet size={14}/> Wallet Applied</span><span>-₹{walletDeduction}</span></div>

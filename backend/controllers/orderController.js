@@ -6,6 +6,7 @@ import Medicine from '../models/Medicine.js';
 import User from '../models/User.js';
 import { creditWallet, debitWallet } from './walletController.js';
 import { refundOnlinePayment } from './paymentController.js';
+import { calculateAreaDiscount } from './areaDiscountController.js';
 
 // Vendors can only move an order one step forward through fulfilment
 const VENDOR_NEXT_STATUS = {
@@ -70,9 +71,11 @@ export const verifyCartItems = async (storeId, items, deliveryAddress, prescript
     throw { status: 400, message: 'A prescription photo is required to order one or more items in your cart.' };
   }
 
+  // Prices come from the database (inv.price above), never from the client
   const itemTotal = verifiedItems.reduce((sum, i) => sum + (i.price * i.quantity), 0);
   const deliveryFee = itemTotal > 500 ? 0 : 40;
-  const totalAmount = itemTotal + deliveryFee;
+  const areaDiscount = await calculateAreaDiscount(deliveryAddress, itemTotal);
+  const totalAmount = itemTotal - areaDiscount + deliveryFee;
 
   let walletUsed = 0;
   if (useWallet && userId) {
@@ -82,13 +85,13 @@ export const verifyCartItems = async (storeId, items, deliveryAddress, prescript
   }
   const payableAmount = totalAmount - walletUsed;
 
-  return { verifiedItems, totalAmount, walletUsed, payableAmount };
+  return { verifiedItems, totalAmount, areaDiscount, walletUsed, payableAmount };
 };
 
 export const placeOrder = async (req, res) => {
   try {
     const { storeId, items, deliveryAddress, prescriptionImage, useWallet } = req.body;
-    const { verifiedItems, totalAmount, walletUsed } = await verifyCartItems(
+    const { verifiedItems, totalAmount, areaDiscount, walletUsed } = await verifyCartItems(
       storeId, items, deliveryAddress, prescriptionImage, req.user._id, useWallet
     );
 
@@ -116,6 +119,7 @@ export const placeOrder = async (req, res) => {
         prescriptionImage: prescriptionImage || null,
         items: verifiedItems,
         totalAmount,
+        areaDiscount,
         walletUsed,
         status: 'Pending',
         paymentMethod: 'COD',
@@ -260,6 +264,11 @@ export const handleReturnDecision = async (req, res) => {
         for (const returnedItem of order.returnItems) {
           const originalItem = order.items.find(i => i.medicineId._id.toString() === returnedItem.medicineId.toString());
           if (originalItem) refundAmount += originalItem.price * returnedItem.quantity;
+        }
+        // The area discount was taken off the whole order, so take the same share off the refund
+        const itemTotal = order.items.reduce((sum, i) => sum + (i.price * i.quantity), 0);
+        if (order.areaDiscount > 0 && itemTotal > 0) {
+          refundAmount = Math.round(refundAmount * (1 - order.areaDiscount / itemTotal));
         }
         if (refundAmount > 0) {
           await creditWallet(

@@ -16,6 +16,7 @@ import reportRoutes from './routes/reportRoutes.js';
 import paymentRoutes from './routes/paymentRoutes.js';
 import addressRoutes from './routes/addressRoutes.js';
 import walletRoutes from './routes/walletRoutes.js';
+import areaDiscountRoutes from './routes/areaDiscountRoutes.js';
 
 const app = express();
 // Render puts one proxy in front of the app; trust it so req.ip (used by rate limiting) is the real client IP
@@ -39,6 +40,7 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/addresses', addressRoutes);
 app.use('/api/wallet', walletRoutes);
+app.use('/api/area-discounts', areaDiscountRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
